@@ -21,6 +21,8 @@ spring:
       max-file-size: 20MB
       max-request-size: 30MB
 
+  rabbitmq:
+    password: ${RABBITMQ_PASSWORD:123456}
   data:
     redis:
       host: localhost

@@ -14,7 +14,7 @@ spring:
     host: localhost
     port: 5672
     username: admin
-    password: ${RABBITMQ_PASSWORD:CHANGEME}
+    password: ${RABBITMQ_PASSWORD:123456}
     listener:
       simple:
         prefetch: 1
