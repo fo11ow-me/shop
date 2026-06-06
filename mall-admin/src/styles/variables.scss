@@ -1,0 +1,55 @@
+:root {
+  // 品牌色
+  --color-primary: #409eff;
+  --color-primary-light: #66b1ff;
+  --color-primary-dark: #337ecc;
+  --color-success: #67c23a;
+  --color-warning: #e6a23c;
+  --color-danger: #f56c6c;
+
+  // 文字色阶
+  --text-primary: #303133;
+  --text-regular: #606266;
+  --text-secondary: #909399;
+  --text-placeholder: #c0c4cc;
+
+  // 边框 / 背景
+  --border-color: #e4e7ed;
+  --border-light: #e8e8e8;
+  --bg-page: #f0f2f5;
+  --bg-white: #ffffff;
+
+  // 阴影
+  --shadow-header: 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-sidebar: 2px 0 6px rgba(0, 21, 41, 0.15);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
+
+  // 侧边栏
+  --sidebar-bg: #304156;
+  --sidebar-sub-bg: #1f2d3d;
+  --sidebar-text: #bfcbd9;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active-indicator: #409eff;
+  --sidebar-logo-bg: #2b3a4a;
+  --sidebar-width: 210px;
+  --sidebar-collapsed-width: 64px;
+  --sidebar-transition: width 0.28s;
+
+  // 顶栏
+  --header-bg: #ffffff;
+  --header-height: 50px;
+  --header-text: #333333;
+
+  // 标签页导航
+  --tag-bg: #ffffff;
+  --tag-item-bg: #f8f8f8;
+  --tag-item-active: #409eff;
+  --tag-item-text: #666666;
+  --tag-height: 34px;
+
+  // 间距
+  --padding-base: 16px;
+  --padding-small: 12px;
+  --padding-mini: 8px;
+  --border-radius-base: 4px;
+}

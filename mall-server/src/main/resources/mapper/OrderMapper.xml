@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.qiujie.mapper.OrderMapper">
+
+    <resultMap id="orderDetailMap" type="com.qiujie.vo.OrderVO">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="addressId" column="address_id"/>
+        <result property="orderSn" column="order_sn"/>
+        <result property="paymentSn" column="payment_sn"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="payMethod" column="pay_method"/>
+        <result property="expressDelivery" column="express_delivery"/>
+        <result property="status" column="status"/>
+        <result property="recipientName" column="recipient_name"/>
+        <result property="recipientPhone" column="recipient_phone"/>
+        <result property="recipientAddress" column="recipient_address"/>
+        <result property="paymentTime" column="payment_time"/>
+        <result property="deliveryTime" column="delivery_time"/>
+        <result property="receiptTime" column="receipt_time"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="userName" column="user_name"/>
+        <collection property="items" ofType="com.qiujie.entity.OrderItem">
+            <id property="id" column="item_id"/>
+            <result property="orderId" column="order_id"/>
+            <result property="productId" column="product_id"/>
+            <result property="productName" column="product_name"/>
+            <result property="productPrice" column="product_price"/>
+            <result property="productImg" column="product_img"/>
+            <result property="amount" column="amount"/>
+        </collection>
+    </resultMap>
+
+    <select id="selectByUserId" resultMap="orderDetailMap">
+        SELECT
+            o.id, o.user_id, o.address_id, o.order_sn, o.payment_sn, o.total_amount, o.pay_method,
+            o.express_delivery, o.status,
+            o.recipient_name, o.recipient_phone, o.recipient_address,
+            o.payment_time, o.delivery_time, o.receipt_time,
+            o.create_time, o.update_time,
+            u.name AS user_name,
+            oi.id AS item_id, oi.order_id, oi.product_id, oi.product_name,
+            oi.product_price, oi.product_img, oi.amount
+        FROM oms_order o
+        LEFT JOIN sys_user u ON u.id = o.user_id AND u.is_deleted = 0
+        LEFT JOIN oms_order_item oi ON oi.order_id = o.id AND oi.is_deleted = 0
+        WHERE o.user_id = #{userId} AND o.is_deleted = 0
+        ORDER BY o.create_time DESC
+    </select>
+
+    <select id="selectDetailById" resultMap="orderDetailMap">
+        SELECT
+            o.id, o.user_id, o.address_id, o.order_sn, o.payment_sn, o.total_amount, o.pay_method,
+            o.express_delivery, o.status,
+            o.recipient_name, o.recipient_phone, o.recipient_address,
+            o.payment_time, o.delivery_time, o.receipt_time,
+            o.create_time, o.update_time,
+            u.name AS user_name,
+            oi.id AS item_id, oi.order_id, oi.product_id, oi.product_name,
+            oi.product_price, oi.product_img, oi.amount
+        FROM oms_order o
+        LEFT JOIN sys_user u ON u.id = o.user_id AND u.is_deleted = 0
+        LEFT JOIN oms_order_item oi ON oi.order_id = o.id AND oi.is_deleted = 0
+        WHERE o.id = #{id} AND o.is_deleted = 0
+    </select>
+
+    <select id="selectPageWithParams" resultType="com.qiujie.vo.OrderVO">
+        SELECT o.*, u.name AS user_name
+        FROM oms_order o
+        LEFT JOIN sys_user u ON u.id = o.user_id AND u.is_deleted = 0
+        <where>
+            o.is_deleted = 0
+            <if test="orderSn != null and orderSn != ''">
+                AND o.order_sn = #{orderSn}
+            </if>
+            <if test="userName != null and userName != ''">
+                AND u.name LIKE CONCAT('%', #{userName}, '%')
+            </if>
+            <if test="statusList != null and statusList.size() > 0">
+                AND o.status IN
+                <foreach collection="statusList" item="s" open="(" separator="," close=")">
+                    #{s}
+                </foreach>
+            </if>
+            <if test="startTime != null and startTime != ''">
+                AND o.create_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null and endTime != ''">
+                AND o.create_time &lt;= CONCAT(#{endTime}, ' 23:59:59')
+            </if>
+        </where>
+        ORDER BY o.create_time DESC
+    </select>
+
+    <select id="selectTrendData" resultType="java.util.Map">
+        SELECT DATE_FORMAT(create_time, '%Y-%m-%d') AS `date`,
+               COUNT(*) AS orderCount,
+               COALESCE(SUM(total_amount), 0) AS sales
+        FROM oms_order
+        WHERE is_deleted = 0 AND create_time &gt;= DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
+        GROUP BY DATE_FORMAT(create_time, '%Y-%m-%d')
+        ORDER BY `date` ASC
+    </select>
+
+    <select id="selectCategorySales" resultType="com.qiujie.vo.CategorySalesVO">
+        SELECT c.name AS categoryName,
+               COALESCE(SUM(oi.amount), 0) AS `count`
+        FROM oms_order_item oi
+        INNER JOIN oms_order o ON o.id = oi.order_id AND o.is_deleted = 0
+        INNER JOIN pms_product p ON p.id = oi.product_id AND p.is_deleted = 0
+        INNER JOIN pms_category c ON c.id = p.category_id AND c.is_deleted = 0
+        WHERE oi.is_deleted = 0
+        GROUP BY c.id, c.name
+        ORDER BY `count` DESC
+    </select>
+
+</mapper>

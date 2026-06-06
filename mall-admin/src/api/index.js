@@ -1,0 +1,8 @@
+export { login, getVerificationCode } from './auth'
+export { queryCount, queryTrend, queryCategorySales } from './home'
+export { add, del, deleteBatch, edit, list, reset, exp, uploadAvatar } from './user'
+export { list as listOrder, detail, deliver, cancel, deleteBatch as deleteBatchOrder, batchDeliver } from './order'
+export { tree, all, add as addCategory, edit as editCategory, del as delCategory } from './category'
+export { upload } from './oss'
+export { getEnums } from './enum'
+export { list as listProduct, add as addProduct, edit as editProduct, del as delProduct, toggleStatus } from './product'

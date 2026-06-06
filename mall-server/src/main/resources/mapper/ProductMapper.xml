@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.qiujie.mapper.ProductMapper">
+
+    <resultMap id="productDetailMap" type="com.qiujie.vo.ProductVO">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="price" column="price"/>
+        <result property="stock" column="stock"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="detail" column="detail"/>
+        <result property="status" column="status"/>
+        <result property="version" column="version"/>
+        <result property="categoryName" column="category_name"/>
+        <collection property="images" ofType="com.qiujie.entity.ProductImg">
+            <id property="id" column="img_id"/>
+            <result property="url" column="url"/>
+            <result property="productId" column="product_id"/>
+        </collection>
+    </resultMap>
+
+    <select id="selectByCategoryId" resultType="com.qiujie.entity.Product">
+        SELECT id, name, price, stock, category_id, detail
+        FROM pms_product
+        WHERE is_deleted = 0
+        AND category_id IN (
+            SELECT id FROM pms_category WHERE parent_id = #{categoryId} AND is_deleted = 0
+            UNION SELECT #{categoryId}
+        )
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="search" resultType="com.qiujie.entity.Product">
+        SELECT id, name, price, stock, category_id, detail
+        FROM pms_product
+        WHERE is_deleted = 0
+        AND name LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectDetailById" resultMap="productDetailMap">
+        SELECT
+            p.id, p.name, p.price, p.stock, p.category_id, p.detail, p.status, p.version,
+            c.name AS category_name,
+            pi.id AS img_id, pi.url, pi.product_id
+        FROM pms_product p
+        LEFT JOIN pms_category c ON c.id = p.category_id AND c.is_deleted = 0
+        LEFT JOIN pms_product_img pi ON pi.product_id = p.id AND pi.is_deleted = 0
+        WHERE p.id = #{id} AND p.is_deleted = 0
+    </select>
+
+    <select id="selectByCategoryIdLimit" resultType="com.qiujie.entity.Product">
+        SELECT id, name, price, stock, category_id, detail
+        FROM pms_product
+        WHERE is_deleted = 0
+        AND category_id IN (
+            SELECT id FROM pms_category WHERE parent_id = #{categoryId} AND is_deleted = 0
+            UNION SELECT #{categoryId}
+        )
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectPageByCategoryId" resultType="com.qiujie.entity.Product">
+        SELECT id, name, price, stock, category_id, detail
+        FROM pms_product
+        WHERE is_deleted = 0
+        AND category_id IN (
+            SELECT id FROM pms_category WHERE parent_id = #{categoryId} AND is_deleted = 0
+            UNION SELECT #{categoryId}
+        )
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectPageByKeyword" resultType="com.qiujie.entity.Product">
+        SELECT id, name, price, stock, category_id, detail
+        FROM pms_product
+        WHERE is_deleted = 0
+        AND name LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectPageByName" resultType="com.qiujie.entity.Product">
+        SELECT id, name, price, stock, category_id, detail, status
+        FROM pms_product
+        WHERE is_deleted = 0
+        <if test="name != null and name != ''">
+            AND name LIKE CONCAT('%', #{name}, '%')
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="categoryId != null">
+            AND category_id IN (
+                SELECT id FROM pms_category WHERE parent_id = #{categoryId} AND is_deleted = 0
+                UNION SELECT #{categoryId}
+            )
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>

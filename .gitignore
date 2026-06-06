@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Java build output
+target/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+
+# Logs
+*.log
+log/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude local settings (contains API keys)
+.claude/settings.local.json
+
+# Test artifacts
+.playwright-mcp/
+.superpowers/
+test-results/
+playwright-report/
+
+# Env files with secrets
+.env
+.env.local
+.env.*.local
+
+# Project uploads (runtime data)
+file/
+
+# Deploy artifacts
+*.tar.gz
+
+# Dist
+dist/
