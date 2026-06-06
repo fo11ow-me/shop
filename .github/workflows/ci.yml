@@ -49,6 +49,9 @@ jobs:
         run: |
           chmod +x mvnw
           ./mvnw test
+        env:
+          JWT_ADMIN_SECRET: YWRtaW4tc2VjcmV0LWZvci1tYWxsLXNlcnZlci1qLTEyOC1iaXRzLXRlc3Q
+          JWT_PORTAL_SECRET: cG9ydGFsLXNlY3JldC1mb3ItbWFsbC1zZXJ2ZXItai0xMjgtYml0cy10ZXN0
 
       - name: Upload JaCoCo report
         if: always()
