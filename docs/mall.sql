@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS per_role;
 -- ----------------------------
 -- 3. 订单表结构变更
 -- ----------------------------
+ALTER TABLE oms_order ADD COLUMN payment_sn VARCHAR(32) DEFAULT NULL AFTER order_sn;
 ALTER TABLE oms_order ADD COLUMN recipient_name VARCHAR(32) DEFAULT '' AFTER status;
 ALTER TABLE oms_order ADD COLUMN recipient_phone VARCHAR(20) DEFAULT '' AFTER recipient_name;
 ALTER TABLE oms_order ADD COLUMN recipient_address VARCHAR(255) DEFAULT '' AFTER recipient_phone;
