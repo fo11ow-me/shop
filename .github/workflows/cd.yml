@@ -27,7 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ---- Backend ----
+      # ============================================
+      # Build
+      # ============================================
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -41,7 +43,6 @@ jobs:
           ./mvnw package -DskipTests
         working-directory: mall-server
 
-      # ---- Frontends ----
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
@@ -59,7 +60,9 @@ jobs:
           npm run build
         working-directory: mall-portal
 
-      # ---- Docker Build & Push ----
+      # ============================================
+      # Docker Build & Push
+      # ============================================
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -94,7 +97,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # ---- Deploy ----
+      # ============================================
+      # Deploy
+      # ============================================
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+
+      - name: Snapshot current images for rollback
+        id: snapshot
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+            -p ${{ secrets.SERVER_PORT || 22 }} \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "docker inspect mall-server --format='{{index .Config.Image}}' 2>/dev/null || echo 'none'" \
+            > /tmp/rollback-server
+          ssh -o StrictHostKeyChecking=no \
+            -p ${{ secrets.SERVER_PORT || 22 }} \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "docker inspect mall-nginx --format='{{index .Config.Image}}' 2>/dev/null || echo 'none'" \
+            > /tmp/rollback-nginx
+          echo "Server snapshot: $(cat /tmp/rollback-server)"
+          echo "Nginx snapshot:  $(cat /tmp/rollback-nginx)"
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -105,33 +131,75 @@ jobs:
           script: |
             cd /opt/app/mall
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull
-            docker compose up -d
-            docker image prune -f
+            docker compose pull mall-server mall-nginx
+            docker compose up -d --no-deps mall-server mall-nginx
 
-      # ---- Verify ----
-      - name: Wait for deployment
-        run: sleep 20
+      # ============================================
+      # Verify
+      # ============================================
+      - name: Wait for startup
+        run: sleep 10
 
-      - name: Verify nginx health endpoint
+      - name: Health check with retry
+        id: health
         run: |
-          curl -sSf -H "Host: mall.qiujie.net.cn" --max-time 10 "http://${{ secrets.SERVER_HOST }}/health" || {
-            echo "Health check failed"
-            exit 1
-          }
+          for i in $(seq 1 10); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Host: mall.qiujie.net.cn" \
+              --max-time 5 \
+              "http://${{ secrets.SERVER_HOST }}/health")
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed after ${i}s"
+              exit 0
+            fi
+            echo "Attempt $i: status=$STATUS, retrying..."
+            sleep 5
+          done
+          echo "Health check failed after 10 attempts"
+          exit 1
 
       - name: Verify portal frontend
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: mall.qiujie.net.cn" --max-time 10 "http://${{ secrets.SERVER_HOST }}/")
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "Portal returned $HTTP_CODE, expected 200"
-            exit 1
-          fi
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Host: mall.qiujie.net.cn" --max-time 5 \
+            "http://${{ secrets.SERVER_HOST }}/")
+          [ "$HTTP_CODE" = "200" ] || { echo "Portal: $HTTP_CODE"; exit 1; }
 
       - name: Verify admin frontend
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: mall.qiujie.net.cn" --max-time 10 "http://${{ secrets.SERVER_HOST }}/admin/")
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "Admin returned $HTTP_CODE, expected 200"
-            exit 1
-          fi
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Host: mall.qiujie.net.cn" --max-time 5 \
+            "http://${{ secrets.SERVER_HOST }}/admin/")
+          [ "$HTTP_CODE" = "200" ] || { echo "Admin: $HTTP_CODE"; exit 1; }
+
+      # ============================================
+      # Rollback on failure
+      # ============================================
+      - name: Rollback server on failure
+        if: failure() && steps.snapshot.outcome == 'success'
+        run: |
+          SERVER_IMG=$(cat /tmp/rollback-server)
+          NGINX_IMG=$(cat /tmp/rollback-nginx)
+          echo "Rolling back server to $SERVER_IMG"
+          echo "Rolling back nginx to $NGINX_IMG"
+          ssh -o StrictHostKeyChecking=no \
+            -p ${{ secrets.SERVER_PORT || 22 }} \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "cd /opt/app/mall && \
+             docker tag '$SERVER_IMG' ghcr.io/fo11ow-me/mall-server:rollback 2>/dev/null; \
+             docker tag '$NGINX_IMG' ghcr.io/fo11ow-me/mall-nginx:rollback 2>/dev/null; \
+             docker compose up -d --no-deps mall-server mall-nginx"
+
+      - name: Print logs on failure
+        if: failure()
+        run: |
+          echo "======== mall-server (last 50 lines) ========"
+          ssh -o StrictHostKeyChecking=no \
+            -p ${{ secrets.SERVER_PORT || 22 }} \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "docker logs mall-server --tail 50" || true
+          echo "======== mall-nginx (last 20 lines) ========"
+          ssh -o StrictHostKeyChecking=no \
+            -p ${{ secrets.SERVER_PORT || 22 }} \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "docker logs mall-nginx --tail 20" || true

@@ -68,15 +68,27 @@ services:
     networks:
       - my_network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   mall-nginx:
     image: ghcr.io/fo11ow-me/mall-nginx:latest
     container_name: mall-nginx
     depends_on:
       - mall-server
+    ports:
+      - "80:80"
     networks:
       - my_network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 networks:
   my_network:
