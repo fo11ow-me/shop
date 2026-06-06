@@ -12,6 +12,7 @@ target/
 .idea/
 *.iml
 
+# CI/CD trigger test
 # Logs
 *.log
 log/
