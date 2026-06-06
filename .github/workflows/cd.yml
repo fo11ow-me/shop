@@ -115,14 +115,14 @@ jobs:
 
       - name: Verify nginx health endpoint
         run: |
-          curl -sSf --max-time 10 "http://${{ secrets.SERVER_HOST }}/health" || {
+          curl -sSf -H "Host: mall.qiujie.net.cn" --max-time 10 "http://${{ secrets.SERVER_HOST }}/health" || {
             echo "Health check failed"
             exit 1
           }
 
       - name: Verify portal frontend
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://${{ secrets.SERVER_HOST }}/")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: mall.qiujie.net.cn" --max-time 10 "http://${{ secrets.SERVER_HOST }}/")
           if [ "$HTTP_CODE" != "200" ]; then
             echo "Portal returned $HTTP_CODE, expected 200"
             exit 1
@@ -130,7 +130,7 @@ jobs:
 
       - name: Verify admin frontend
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://${{ secrets.SERVER_HOST }}/admin/")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: mall.qiujie.net.cn" --max-time 10 "http://${{ secrets.SERVER_HOST }}/admin/")
           if [ "$HTTP_CODE" != "200" ]; then
             echo "Admin returned $HTTP_CODE, expected 200"
             exit 1
