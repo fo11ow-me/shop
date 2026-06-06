@@ -1,5 +1,7 @@
 # 服务器部署指南
 
+> CI/CD 自动化部署已配置。push 到 `dev` 分支自动触发构建、镜像推送、SSH 部署和健康验证。
+
 ## 前置条件
 
 1. 服务器安装 Docker 和 Docker Compose
