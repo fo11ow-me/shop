@@ -3,7 +3,6 @@
 .env
 .env.*
 node_modules/
-dist/
 target/
 *.log
 log/
