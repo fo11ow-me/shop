@@ -36,7 +36,9 @@ jobs:
           cache: "maven"
 
       - name: Run tests
-        run: ./mvnw test
+        run: |
+          chmod +x mvnw
+          ./mvnw test
 
       - name: Upload JaCoCo report
         if: always()

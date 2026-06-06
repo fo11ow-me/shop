@@ -36,7 +36,9 @@ jobs:
           cache: "maven"
 
       - name: Package backend JAR
-        run: ./mvnw package -DskipTests
+        run: |
+          chmod +x mvnw
+          ./mvnw package -DskipTests
         working-directory: mall-server
 
       # ---- Frontends ----
