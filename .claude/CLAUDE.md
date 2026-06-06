@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Java 17+** + Maven 3
 - **Node.js 18+** + npm
-- **Docker** (MySQL 8.0 + Redis 7 通过 docker-compose 提供)
+- **Docker** (MySQL 8.0 + Redis 7 + RabbitMQ + Elasticsearch 通过 docker-compose 提供)
 
 ### 端口占用
 
@@ -18,6 +18,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 |------|----------|----------|
 | MySQL 8.0 | 3306 | 3306 |
 | Redis 7 | 6379 | 6379 |
+| RabbitMQ 3 | 5672, 15672 | 5672, 15672 |
+| Elasticsearch 7 | 9200, 9300 | 9200, 9300 |
 | mall-server | 8800 | — |
 | mall-portal | 3001 | — |
 | mall-admin | 3002 | — |
@@ -30,7 +32,7 @@ docker compose up -d
 
 # 2. 启动后端 (端口 8800)
 cd mall-server
-mvn spring-boot:run
+./mvnw spring-boot:run
 
 # 3. 启动管理后台 (端口 3002)
 cd mall-admin
@@ -47,28 +49,29 @@ npm run dev
 
 | 模块 | 说明 | 技术栈 | 端口 |
 |------|------|--------|------|
-| **mall-server** | 后端服务，REST API | Spring Boot 3.2.5 + MyBatis-Plus 3.5.5 + MySQL + Redis + JWT | 8800 |
+| **mall-server** | 后端服务，REST API | Spring Boot 3.2.5 + MyBatis-Plus 3.5.5 + MySQL + Redis + JWT + Actuator | 8800 |
 | **mall-admin** | 管理后台前端 | Vue 3.4 + Element Plus 2.5 + Pinia + ECharts + UnoCSS | 3002 |
 | **mall-portal** | 用户门户前端 | Vue 3.4 + Element Plus 2.5 + Axios | 3001 |
 
 ## 运行测试
 
 ### 后端测试
+
 ```bash
 cd mall-server
-# 运行所有测试（单元 + 集成 + API 层）
-mvn test
+
+# 运行所有测试（单元 + 集成 + API 层，使用 H2 内存数据库）
+./mvnw test
 
 # 运行特定测试类
-mvn test -Dtest="AuthApiTest"
+./mvnw test -Dtest="AuthApiTest"
 
 # 运行特定测试分组（unit / integration / api）
-mvn test -Dtest="*ApiTest"     # API 契约测试
-mvn test -Dtest="*MapperTest"  # 集成测试（H2 内存数据库）
-mvn test -Dtest="*ServiceImplTest"  # Service 单元测试
+./mvnw test -Dtest="*ApiTest"           # API 契约测试
+./mvnw test -Dtest="*MapperTest"        # 集成测试（H2 内存数据库）
+./mvnw test -Dtest="*ServiceImplTest"   # Service 单元测试
 
 # 测试覆盖率报告（JaCoCo）
-mvn test
 # 报告输出: target/site/jacoco/index.html
 ```
 
@@ -78,9 +81,10 @@ mvn test
 - `src/test/java/com/qiujie/service/` — Service 层测试（Mock 依赖）
 - `src/test/java/com/qiujie/api/` — API 契约测试 + Security 测试（全 Spring 上下文 + MockMvc）
 
-> 后端测试使用 H2 内存数据库，不依赖本地 MySQL，无外部依赖即可运行。
+> 后端测试使用 H2 内存数据库，不依赖本地 MySQL。Redis 部分在 CI 中由 service container 提供，本地需 Docker 运行 Redis。
 
 ### 前端测试（Playwright E2E）
+
 ```bash
 cd mall-admin  # or mall-portal
 npx playwright test                  # 运行所有 E2E 测试
@@ -89,67 +93,103 @@ npx playwright test --ui             # 交互式 UI 模式
 npx playwright test --debug          # 逐步调试
 npx playwright test --project=chromium  # 指定浏览器
 ```
+
 E2E 测试文件: `mall-admin/e2e/admin-workflow.spec.cjs`, `mall-portal/e2e/purchase-flow.spec.cjs`, `mall-portal/e2e/error-handling.spec.cjs`
 
 ## 关键路径
 
 ### 后端 (mall-server/)
-- 主配置: `mall-server/src/main/resources/application.yml` (端口 8800, MyBatis-Plus, JWT)
-- 开发配置: `mall-server/src/main/resources/application-dev.yml` (MySQL, Redis, OSS, Druid 连接池)
+- 主配置: `mall-server/src/main/resources/application.yml`
+- 开发配置: `mall-server/src/main/resources/application-dev.yml`（H2 + Redis localhost）
+- 生产配置: `mall-server/src/main/resources/application-prod.yml`（MySQL + Redis Docker 服务名）
 - 安全配置: `mall-server/src/main/java/com/qiujie/config/SecurityConfig.java`
-- 管理端 API: `controller/admin/` (Login, User, Role, Menu, Product, Category, Order, Home)
-- 门户端 API: `controller/portal/` (Auth, Cart, Order, Product)
-- 业务层: `service/` (与 controller 对应)
-- 数据层: `mapper/` (MyBatis-Plus BaseMapper + XML)
-- SQL 映射: `src/main/resources/mapper/*.xml`
-- 实体: `entity/` (User, Role, Menu, Product, Cart, Order, Category…)
-- 枚举: `enums/` (业务枚举，MyBatis-Plus 自动映射)
-- 工具: `util/` (JwtUtil, RedisUtil, ValidateCodeUtil…)
+- 管理端 API: `controller/admin/`
+- 门户端 API: `controller/portal/`
+- 业务层: `service/`
+- 数据层: `mapper/`（MyBatis-Plus BaseMapper + XML 映射: `src/main/resources/mapper/*.xml`）
+- 实体: `entity/`
+- 枚举: `enums/`（MyBatis-Plus 自动映射）
+- 工具: `util/`（JwtUtil, RedisUtil, ValidateCodeUtil…）
+- 健康检查: `http://localhost:8800/actuator/health`
 
 ### 管理后台 (mall-admin/)
-- Vite 配置: `vite.config.mjs` (端口 3002, 代理 + UnoCSS + SCSS)
-- 入口: `src/main.js`
-- 路由: `src/router/index.js`
-- 状态管理: `src/stores/` (menu, token, user, tag, permission)
-- API 模块: `src/api/` (home, login, menu, role, user)
-- 页面: `src/views/` (login, home, user, role, menu)
-- 组件: `src/components/` (Aside, Header, Tag)
-- 权限指令: `src/directive/permission.js`
+- Vite 配置: `vite.config.mjs`（端口 3002, 代理 `/dev` → `/admin`, UnoCSS + SCSS）
+- 路由: `src/router/index.js`（history 模式）
+- 状态管理: `src/stores/`（menu, token, user, tag, permission）
+- API 模块: `src/api/`
+- 页面: `src/views/`
+- 组件: `src/components/`（Aside, Header, Tag）
 - HTTP 工具: `src/utils/request.js`
+- 权限指令: `src/directive/permission.js`
 
 ### 用户门户 (mall-portal/)
-- Vite 配置: `vite.config.js` (端口 3001, 代理 + 日志插件 → `../log/mall-portal.log`)
-- 入口: `src/main.js`
-- 路由: `src/router/index.js`
-- API 模块: `src/api/` (auth, cart, order, product, user)
-- 页面: `src/views/` (Home, Cart, Checkout, Login, Register, ProductDetail, ProductList, Search, OrderList, UserInfo…)
+- Vite 配置: `vite.config.js`（端口 3001, 代理 `/dev` → `/portal`）
+- 路由: `src/router/index.js`（history 模式）
+- API 模块: `src/api/`（auth, cart, order, product, user）
+- 页面: `src/views/`
 - HTTP 工具: `src/utils/request.js`
+
+## 敏感信息管理
+
+所有密码、密钥、Token 通过 **环境变量** 管理，严禁硬编码。
+
+- **Spring Boot**：使用 `${ENV_VAR:default}` 语法引用，本地开发有合理的默认值
+- **Docker Compose（本地）**：`${ENV_VAR:-default}` 语法，默认值为 `123456` 方便本地开发
+- **Docker Compose（服务器）**：`${ENV_VAR}` 无默认值，强制通过 `.env` 文件提供
+- **GitHub Actions**：所有服务器环境的敏感值通过 GitHub Secrets 注入
+- **服务器 `.env`**：位于 `/opt/app/mall/.env`，权限 `chmod 600`
+
+环境变量模板: `docker-compose.server.env.example`
+
+## CI/CD
+
+### GitHub Actions
+
+每次 push 到 `dev` 分支自动触发：
+
+| 工作流 | 文件 | 触发条件 | 作用 |
+|--------|------|---------|------|
+| **CI** | `.github/workflows/ci.yml` | push / PR 到 `dev` | 后端测试 + 前端构建验证 |
+| **CD** | `.github/workflows/cd.yml` | push 到 `dev` | 构建 Docker 镜像 → 推送 ghcr.io → SSH 部署 → 健康验证 |
+
+> `docs/**`、`*.md`、`.claude/**` 的变更不会触发 CI/CD。
+
+### Docker 镜像
+
+- 镜像仓库：`ghcr.io/fo11ow-me/mall-server` 和 `ghcr.io/fo11ow-me/mall-nginx`
+- `mall-server/Dockerfile` — 基于 `eclipse-temurin:17-jre-jammy`，通过 `SPRING_PROFILES_ACTIVE` 环境变量控制 profile
+- `Dockerfile.nginx` — 基于 `nginx:alpine`，将两个前端 dist + `nginx.conf` 打包
+
+### 服务器部署
+
+部署路径: `/opt/app/mall/`，使用 `docker-compose.server.yml`（包含 mall-server 和 mall-nginx 容器，与中间件共享 `my_network` 外部网络）。
 
 ## 数据库
 
-- **MySQL 数据库名**: `mall` (开发环境 `127.0.0.1:3306`)
-- **初始化 SQL**: `docs/mall.sql` (表结构变更 + 种子数据)
-- **关闭服务**: 使用 `bash docker-down.sh` 关闭，会自动导出数据库到 `docs/mall.sql` 再停止容器。直接 `docker compose down` 会丢弃容器内的数据变更
+- **MySQL 数据库名**: `mall`（开发环境 `127.0.0.1:3306`, 服务器 `mall-mysql:3306`）
+- **初始化 SQL**: `docs/mall.sql`（表结构 + 种子数据）
+- **关闭服务**: 使用 `bash docker-down.sh`，自动 `mysqldump` 导出数据库后停止容器。直接 `docker compose down` 会丢弃数据变更
 - MyBatis-Plus 配置: 驼峰映射、逻辑删除 (logic-delete-value=1)、枚举自动映射
 - Druid 连接池: 初始化 5, 最小空闲 5, 最大活跃 30
 
 ## API 契约
 
 - springdoc-openapi 文档: `http://localhost:8800/swagger-ui/index.html`
-- 管理端代理: mall-admin Vite 将 `/dev` 代理至 `http://localhost:8800`，路径重写为 `/admin`
-- 门户端代理: mall-portal Vite 将 `/dev` 代理至 `http://localhost:8800`，路径重写为 `/portal`
-- 接口变更时后端必须同步更新 springdoc 注解，前端按文档对接
+- 管理端代理: Vite 将 `/dev` 代理至 `http://localhost:8800`，路径重写为 `/admin`
+- 门户端代理: Vite 将 `/dev` 代理至 `http://localhost:8800`，路径重写为 `/portal`
+- 生产环境: nginx 反向代理 `/dev/` → `mall-server:8800/portal/`, `/admin-api/` → `mall-server:8800/admin/`
+- 接口变更时后端必须同步更新 springdoc 注解
 
 ## Agent 协作规范
 
 本项目采用 Agent Teams 模式，角色定义见 `.claude/agents/` 目录：
 
-| Agent | 职责范围 | 角色文件 | 角色 |
-|-------|---------|----------|------|
-| Agent T | 全系统测试 | `.claude/agents/test-engineer.md` | 测试工程师 |
-| Agent A | mall-admin/ | `.claude/agents/admin-developer.md` | 开发工程师 |
-| Agent B | mall-portal/ | `.claude/agents/portal-developer.md` | 开发工程师 |
-| Agent C | mall-server/ | `.claude/agents/server-developer.md` | 开发工程师 |
+| Agent | 职责范围 | 角色文件 |
+|-------|---------|----------|
+| Agent T | 全系统测试 | `.claude/agents/test-engineer.md` |
+| Agent A | mall-admin/ | `.claude/agents/admin-developer.md` |
+| Agent B | mall-portal/ | `.claude/agents/portal-developer.md` |
+| Agent C | mall-server/ | `.claude/agents/server-developer.md` |
 
 ### 核心协作流程: 测→修→验 循环
 
@@ -161,6 +201,5 @@ Agent T 执行测试 → 发现 Bug → 记录 docs/bugs.md → 指派开发 Age
 - 每个开发 Agent 只修改自己负责的模块目录，禁止跨模块修改
 - Agent T 只读代码、定位问题、记录 Bug，不修改业务代码
 - 前后端接口变更：后端 Agent 更新 API → 同步 springdoc 注解 → 前端 Agent 按文档调整
-- Agent T 对变更接口进行回归测试
 - 并行开发时使用 `superpowers:dispatching-parallel-agents` 技能分发任务
 - 协作流程详见 `.claude/agents/README.md`
