@@ -1,4 +1,21 @@
 services:
+  mall-registry:
+    image: registry:2
+    container_name: mall-registry
+    mem_limit: 256m
+    environment:
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: "Registry Realm"
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+    volumes:
+      - /opt/docker/mall-registry/data:/var/lib/registry
+      - /opt/docker/mall-registry/auth:/auth
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - my_network
+    restart: unless-stopped
+
   mall-mysql:
     image: mysql:8.0
     container_name: mall-mysql
@@ -86,7 +103,7 @@ services:
     restart: unless-stopped
 
   mall-server:
-    image: ghcr.io/fo11ow-me/mall-server:latest
+    image: localhost:5000/mall/mall-server:latest
     container_name: mall-server
     mem_limit: 512m
     deploy:
@@ -119,7 +136,7 @@ services:
         max-file: "5"
 
   mall-nginx:
-    image: ghcr.io/fo11ow-me/mall-nginx:latest
+    image: localhost:5000/mall/mall-nginx:latest
     container_name: mall-nginx
     mem_limit: 256m
     deploy:
