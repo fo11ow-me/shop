@@ -4,12 +4,23 @@ spring:
     username: root
     password: ${DB_PASSWORD:CHANGEME}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
   data:
     redis:
       host: mall-redis
       port: 6379
       password: ${REDIS_PASSWORD:CHANGEME}
       database: 0
+      lettuce:
+        pool:
+          max-active: 32
+          max-idle: 16
+          min-idle: 8
   rabbitmq:
     host: mall-rabbitmq
     port: 5672
