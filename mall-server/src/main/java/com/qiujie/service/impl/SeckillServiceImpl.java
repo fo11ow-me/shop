@@ -17,7 +17,6 @@ import com.qiujie.mq.SeckillMessage;
 import com.qiujie.service.SeckillService;
 import com.qiujie.util.RedisUtil;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -32,7 +31,6 @@ import java.util.Map;
  * @author qiujie
  */
 @Service
-@Profile("!test")
 public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, SeckillSession> implements SeckillService {
 
     private static final String SECKILL_ORDER_KEY = "seckill:order:";
@@ -168,8 +166,15 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
         message.setUserId(userId);
         message.setProductId(session.getProductId());
         message.setSeckillPrice(session.getSeckillPrice());
-        rabbitTemplate.convertAndSend(RabbitMQConfig.SECKILL_EXCHANGE,
-                RabbitMQConfig.SECKILL_ROUTING_KEY, message);
+        try {
+            rabbitTemplate.convertAndSend(RabbitMQConfig.SECKILL_EXCHANGE,
+                    RabbitMQConfig.SECKILL_ROUTING_KEY, message);
+        } catch (Exception e) {
+            // RabbitMQ 不可用时回滚 Redis 库存
+            redisUtil.increment(stockKey, 1);
+            redisUtil.del(orderKey);
+            throw new ServiceException(BusinessStatusEnum.ERROR);
+        }
     }
 
     @Override

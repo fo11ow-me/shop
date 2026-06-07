@@ -129,3 +129,21 @@ MERGE INTO oms_order_item (id, order_id, product_id, product_name, product_price
 MERGE INTO oms_cart (id, user_id, product_id, amount, is_selected) KEY(id) VALUES
 (1, 2, 1, 2, 1),
 (2, 2, 3, 1, 0);
+
+CREATE TABLE IF NOT EXISTS sms_seckill_session (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    seckill_price DECIMAL(10,2) DEFAULT 0,
+    seckill_stock INT DEFAULT 0,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_deleted INT DEFAULT 0
+);
+
+-- Active session: start in past, end in future (always valid during test)
+-- Upcoming session: both start and end in far future
+MERGE INTO sms_seckill_session (id, product_id, seckill_price, seckill_stock, start_time, end_time, is_deleted) KEY(id) VALUES
+(1, 1, 5999.00, 10, '2025-01-01 00:00:00', '2099-12-31 23:59:59', 0),
+(2, 2, 12999.00, 5, '2099-01-01 00:00:00', '2099-12-31 23:59:59', 0);
