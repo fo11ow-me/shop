@@ -97,48 +97,21 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         Map<Integer, Product> productMap = productMapper.selectBatchIds(productIds).stream()
                 .collect(Collectors.toMap(Product::getId, p -> p));
 
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        List<OrderItem> orderItems = new ArrayList<>();
+        Order order = buildOrder(userId, addressId, payMethod, params);
+        save(order);
 
         for (CartVO cart : selectedCarts) {
             Product product = productMap.get(cart.getProductId());
             if (product == null) {
                 throw new ServiceException(BusinessStatusEnum.PRODUCT_STOCK_INSUFFICIENT.getCode(), "商品[" + cart.getProductName() + "]不存在");
             }
-            // 原子扣减库存
             if (productMapper.decrementStock(product.getId(), cart.getAmount()) == 0) {
                 throw new ServiceException(BusinessStatusEnum.PRODUCT_STOCK_INSUFFICIENT.getCode(), "商品[" + cart.getProductName() + "]库存不足");
             }
-            BigDecimal itemTotal = product.getPrice().multiply(new BigDecimal(cart.getAmount()));
-            totalAmount = totalAmount.add(itemTotal);
-
-            OrderItem item = new OrderItem();
-            item.setProductId(cart.getProductId());
-            item.setProductName(cart.getProductName());
-            item.setProductPrice(product.getPrice());
-            item.setProductImg(cart.getProductImg());
-            item.setAmount(cart.getAmount());
-            orderItems.add(item);
+            order.setTotalAmount(order.getTotalAmount().add(product.getPrice().multiply(new BigDecimal(cart.getAmount()))));
+            addOrderItem(order, product.getId(), product.getName(), product.getPrice(), cart.getProductImg(), cart.getAmount());
         }
-
-        Order order = new Order();
-        order.setUserId(userId);
-        order.setAddressId(addressId);
-        order.setOrderSn(generateOrderSn());
-        order.setTotalAmount(totalAmount);
-        order.setPayMethod(payMethod);
-        order.setStatus(OrderStatusEnum.PENDING_PAY);
-        order.setRecipientName((String) params.getOrDefault("recipientName", ""));
-        order.setRecipientPhone((String) params.getOrDefault("recipientPhone", ""));
-        order.setRecipientAddress((String) params.getOrDefault("recipientAddress", ""));
-        Integer expressDelivery = (Integer) params.getOrDefault("expressDelivery", 0);
-        order.setExpressDelivery(expressDelivery);
-        save(order);
-
-        for (OrderItem item : orderItems) {
-            item.setOrderId(order.getId());
-            orderItemMapper.insert(item);
-        }
+        updateById(order);
 
         for (CartVO cart : selectedCarts) {
             cartMapper.deleteById(cart.getId());
@@ -155,37 +128,18 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new ServiceException(BusinessStatusEnum.PARAM_ERROR);
         }
 
-        // 原子扣库存，WHERE stock >= amount 避免 TOCTOU 竞态
         if (productMapper.decrementStock(productId, amount) == 0) {
             throw new ServiceException(BusinessStatusEnum.PRODUCT_STOCK_INSUFFICIENT);
         }
 
         Product product = productMapper.selectById(productId);
-
-        BigDecimal totalAmount = product.getPrice().multiply(new BigDecimal(amount));
-
-        Order order = new Order();
-        order.setUserId(userId);
-        order.setOrderSn(generateOrderSn());
-        order.setTotalAmount(totalAmount);
-        order.setPayMethod(PayMethodEnum.UNKNOWN);
-        order.setStatus(OrderStatusEnum.PENDING_PAY);
-        order.setRecipientName((String) params.getOrDefault("recipientName", ""));
-        order.setRecipientPhone((String) params.getOrDefault("recipientPhone", ""));
-        order.setRecipientAddress((String) params.getOrDefault("recipientAddress", ""));
-        Integer expressDelivery = (Integer) params.getOrDefault("expressDelivery", 0);
-        order.setExpressDelivery(expressDelivery);
+        Order order = buildOrder(userId, null, PayMethodEnum.UNKNOWN, params);
+        order.setTotalAmount(product.getPrice().multiply(new BigDecimal(amount)));
         save(order);
 
-        OrderItem item = new OrderItem();
-        item.setOrderId(order.getId());
-        item.setProductId(product.getId());
-        item.setProductName(product.getName());
-        item.setProductPrice(product.getPrice());
-        item.setAmount(amount);
         ProductImg firstImg = productImgMapper.selectFirstByProductId(product.getId());
-        if (firstImg != null) item.setProductImg(firstImg.getUrl());
-        orderItemMapper.insert(item);
+        String imgUrl = firstImg != null ? firstImg.getUrl() : null;
+        OrderItem item = addOrderItem(order, product.getId(), product.getName(), product.getPrice(), imgUrl, amount);
 
         order.setItems(List.of(item));
         return order;
@@ -322,6 +276,40 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     public void batchDelete(List<Integer> ids) {
         removeBatchByIds(ids);
+    }
+
+    /**
+     * 构建订单骨架，填充收件人、配送方式等公共字段
+     */
+    private Order buildOrder(Integer userId, Integer addressId, PayMethodEnum payMethod, Map<String, Object> params) {
+        Order order = new Order();
+        order.setUserId(userId);
+        if (addressId != null) order.setAddressId(addressId);
+        order.setOrderSn(generateOrderSn());
+        order.setTotalAmount(BigDecimal.ZERO);
+        order.setPayMethod(payMethod);
+        order.setStatus(OrderStatusEnum.PENDING_PAY);
+        order.setRecipientName((String) params.getOrDefault("recipientName", ""));
+        order.setRecipientPhone((String) params.getOrDefault("recipientPhone", ""));
+        order.setRecipientAddress((String) params.getOrDefault("recipientAddress", ""));
+        order.setExpressDelivery((Integer) params.getOrDefault("expressDelivery", 0));
+        return order;
+    }
+
+    /**
+     * 创建订单明细项并持久化
+     */
+    private OrderItem addOrderItem(Order order, Integer productId, String productName,
+                                    BigDecimal price, String img, Integer amount) {
+        OrderItem item = new OrderItem();
+        item.setOrderId(order.getId());
+        item.setProductId(productId);
+        item.setProductName(productName);
+        item.setProductPrice(price);
+        item.setAmount(amount);
+        if (img != null) item.setProductImg(img);
+        orderItemMapper.insert(item);
+        return item;
     }
 
     private String generateOrderSn() {
