@@ -1,40 +1,66 @@
 #!/bin/bash
-# 本地开发辅助脚本
-# 用于开发者本地构建 Docker 镜像并推送到 ghcr.io
+# 本地一键构建部署脚本
+#
+# 流程: 测试 → 打包 → 构建镜像 → 推送 Registry → 触发 CD 部署
 #
 # 前置条件:
-#   1. 已安装 Docker 并登录 ghcr.io: docker login ghcr.io
-#   2. 已安装 Maven 和 Node.js
+#   1. Docker 已安装并登录 ghcr.io: docker login ghcr.io
+#   2. Maven + Node.js 已安装
+#   3. Git 工作区干净（无未提交变更）
 #
-# 注意: 此脚本仅供本地开发使用，生产部署由 GitHub Actions 自动完成
+# 用法: bash deploy.sh
 
 set -e
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJECT_DIR"
 
-echo "========== 1. 构建后端 JAR =========="
+SHA="$(git rev-parse --short HEAD)"
+REGISTRY="ghcr.io"
+OWNER="fo11ow-me"
+IMAGE_SERVER="${REGISTRY}/${OWNER}/mall-server"
+IMAGE_NGINX="${REGISTRY}/${OWNER}/mall-nginx"
+
+echo "========== 1. 运行后端测试 =========="
 cd mall-server
-mvn clean package -DskipTests -q
+./mvnw test -q
 cd ..
 
-echo "========== 2. 构建前端 =========="
+echo "========== 2. 打包后端 JAR =========="
+cd mall-server
+./mvnw clean package -DskipTests -q
+cd ..
+
+echo "========== 3. 构建前端 =========="
 cd mall-admin && npm run build 2>&1 | tail -1 && cd ..
 cd mall-portal && npm run build 2>&1 | tail -1 && cd ..
 
-echo "========== 3. 构建 Docker 镜像 =========="
-docker build --platform linux/amd64 -t ghcr.io/fo11ow-me/mall-server:latest -f mall-server/Dockerfile mall-server/
-docker build --platform linux/amd64 -t ghcr.io/fo11ow-me/mall-nginx:latest -f Dockerfile.nginx .
+echo "========== 4. 构建 Docker 镜像 (latest + ${SHA}) =========="
+docker build --platform linux/amd64 \
+  -t ${IMAGE_SERVER}:latest \
+  -t ${IMAGE_SERVER}:${SHA} \
+  -f mall-server/Dockerfile mall-server/
 
-echo "========== 4. 推送镜像到 GitHub Container Registry =========="
-docker push ghcr.io/fo11ow-me/mall-server:latest
-docker push ghcr.io/fo11ow-me/mall-nginx:latest
+docker build --platform linux/amd64 \
+  -t ${IMAGE_NGINX}:latest \
+  -t ${IMAGE_NGINX}:${SHA} \
+  -f Dockerfile.nginx .
 
-echo "========== 部署完成 =========="
-echo "镜像已推送到:"
-echo "  ghcr.io/fo11ow-me/mall-server:latest"
-echo "  ghcr.io/fo11ow-me/mall-nginx:latest"
+echo "========== 5. 推送镜像到 Registry =========="
+docker push ${IMAGE_SERVER}:latest
+docker push ${IMAGE_SERVER}:${SHA}
+docker push ${IMAGE_NGINX}:latest
+docker push ${IMAGE_NGINX}:${SHA}
+
+echo "========== 6. 推送代码触发 CD 部署 =========="
+git push origin dev
+
 echo ""
-echo "如需部署到服务器，请运行 GitHub Actions CD 工作流"
-echo "或手动执行服务器端部署:"
-echo "  ssh <your-server> 'cd /opt/app/mall && docker compose pull && docker compose up -d'"
+echo "========== 完成 =========="
+echo "镜像:"
+echo "  ${IMAGE_SERVER}:latest"
+echo "  ${IMAGE_SERVER}:${SHA}"
+echo "  ${IMAGE_NGINX}:latest"
+echo "  ${IMAGE_NGINX}:${SHA}"
+echo ""
+echo "CD 已触发，监控: https://github.com/${OWNER}/mall/actions"
