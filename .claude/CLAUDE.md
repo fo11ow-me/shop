@@ -136,33 +136,39 @@ E2E 测试文件: `mall-admin/e2e/admin-workflow.spec.cjs`, `mall-portal/e2e/pur
 - **Spring Boot**：使用 `${ENV_VAR:default}` 语法引用，本地开发有合理的默认值
 - **Docker Compose（本地）**：`${ENV_VAR:-default}` 语法，默认值为 `123456` 方便本地开发
 - **Docker Compose（服务器）**：`${ENV_VAR}` 无默认值，强制通过 `.env` 文件提供
-- **GitHub Actions**：所有服务器环境的敏感值通过 GitHub Secrets 注入
 - **服务器 `.env`**：位于 `/opt/app/mall/.env`，权限 `chmod 600`
+- **本地 `.env`**：位于项目根目录，不提交
 
 环境变量模板: `docker-compose.server.env.example`
 
-## CI/CD
+## 部署
 
-### GitHub Actions
+### 流程
 
-每次 push 到 `dev` 分支自动触发：
+```bash
+bash deploy.sh                 # 标准部署
+bash deploy.sh --skip-tests    # 跳过测试（紧急热修复）
+```
 
-| 工作流 | 文件 | 触发条件 | 作用 |
-|--------|------|---------|------|
-| **CI** | `.github/workflows/ci.yml` | push / PR 到 `dev` | 后端测试 + 前端构建验证 |
-| **CD** | `.github/workflows/cd.yml` | push 到 `dev` | 构建 Docker 镜像 → 推送 ghcr.io → SSH 部署 → 健康验证 |
-
-> `docs/**`、`*.md`、`.claude/**` 的变更不会触发 CI/CD。
+脚本自动完成：后端测试 → 打包 JAR → 前端构建 → Docker 构建 → 推送到服务器 Registry → SSH 触发服务器部署。
 
 ### Docker 镜像
 
-- 镜像仓库：`ghcr.io/fo11ow-me/mall-server` 和 `ghcr.io/fo11ow-me/mall-nginx`
+- 镜像仓库：服务器自建 Registry（`<服务器IP>:5000`）
+- 镜像: `localhost:5000/mall/mall-server:latest` / `mall-nginx:latest`
 - `mall-server/Dockerfile` — 基于 `eclipse-temurin:17-jre-jammy`，通过 `SPRING_PROFILES_ACTIVE` 环境变量控制 profile
 - `Dockerfile.nginx` — 基于 `nginx:alpine`，将两个前端 dist + `nginx.conf` 打包
 
 ### 服务器部署
 
-部署路径: `/opt/app/mall/`，使用 `docker-compose.server.yml`（包含 mall-server 和 mall-nginx 容器，与中间件共享 `my_network` 外部网络）。
+部署路径: `/opt/app/mall/`，使用 `docker-compose.server.yml`（包含 mall-server、mall-nginx、mall-registry 容器，与中间件共享 `my_network` 外部网络）。
+
+### 回滚
+
+```bash
+ssh <服务器> bash /opt/app/mall/deploy-server.sh rollback          # 回滚到上一版本
+ssh <服务器> bash /opt/app/mall/deploy-server.sh rollback abc1234  # 回滚到指定 SHA
+```
 
 ## 数据库
 
