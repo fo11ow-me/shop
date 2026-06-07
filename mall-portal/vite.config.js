@@ -35,6 +35,16 @@ export default defineConfig({
       '@': '/src'
     }
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+          'element-plus': ['element-plus'],
+        }
+      }
+    }
+  },
   server: {
     port: 3001,
     proxy: {

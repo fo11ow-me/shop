@@ -90,7 +90,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { WarningFilled } from '@element-plus/icons-vue'
@@ -184,6 +184,12 @@ onMounted(async () => {
     }
   } catch {
     ElMessage.error('加载订单信息失败')
+  }
+})
+
+onUnmounted(() => {
+  if (redirectTimer.value) {
+    clearTimeout(redirectTimer.value)
   }
 })
 

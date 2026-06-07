@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { queryCount, queryTrend, queryCategorySales } from '@/api/home'
 import { useEnumStore } from '@/stores/modules/enum'
@@ -340,23 +340,31 @@ function loadStatusChart() {
   }, true)
 }
 
+// 响应窗口 resize（防抖，避免内存泄漏）
+let resizeTimer = null
+const handleResize = () => {
+  clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(() => {
+    [trendChartRef, categoryChartRef, statusChartRef].forEach(ref => {
+      if (ref.value) echarts.getInstanceByDom(ref.value)?.resize()
+    })
+  }, 200)
+}
+
 onMounted(async () => {
   loading.value = true
   try {
-    await loadCount()
-    await loadTrend()
-    await loadCategorySales()
+    await Promise.all([loadCount(), loadTrend(), loadCategorySales()])
     await nextTick()
     loadStatusChart()
   } finally {
     loading.value = false
   }
+  window.addEventListener('resize', handleResize)
 })
 
-// 响应窗口 resize
-window.addEventListener('resize', () => {
-  [trendChartRef, categoryChartRef, statusChartRef].forEach(ref => {
-    if (ref.value) echarts.getInstanceByDom(ref.value)?.resize()
-  })
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  clearTimeout(resizeTimer)
 })
 </script>
