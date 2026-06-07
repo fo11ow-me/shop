@@ -18,6 +18,7 @@ import com.qiujie.util.RedisUtil;
 import com.rabbitmq.client.Channel;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
@@ -60,6 +61,7 @@ public class SeckillMessageListener {
     /**
      * 消费秒杀订单消息，创建订单并扣减库存
      */
+    @Transactional
     @RabbitListener(queues = RabbitMQConfig.SECKILL_QUEUE)
     public void handleSeckillOrder(SeckillMessage message, Channel channel,
                                     @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) {
