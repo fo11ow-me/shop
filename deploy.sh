@@ -1,66 +1,122 @@
 #!/bin/bash
 # 本地一键构建部署脚本
-#
-# 流程: 测试 → 打包 → 构建镜像 → 推送 Registry → 触发 CD 部署
-#
-# 前置条件:
-#   1. Docker 已安装并登录 ghcr.io: docker login ghcr.io
-#   2. Maven + Node.js 已安装
-#   3. Git 工作区干净（无未提交变更）
-#
-# 用法: bash deploy.sh
+# 用法: bash deploy.sh [--skip-tests]
+set -euo pipefail
 
-set -e
+SKIP_TESTS=false
+if [ "${1:-}" = "--skip-tests" ]; then
+  SKIP_TESTS=true
+fi
 
-PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$PROJECT_DIR"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# 加载 .env
+if [ -f .env ]; then
+  set -a; source .env; set +a
+fi
+
+REQUIRED_VARS="SERVER_HOST SERVER_USER REGISTRY_USER REGISTRY_PASSWORD"
+for v in $REQUIRED_VARS; do
+  if [ -z "${!v:-}" ]; then
+    echo "错误: .env 缺少变量 $v"
+    exit 1
+  fi
+done
 
 SHA="$(git rev-parse --short HEAD)"
-REGISTRY="ghcr.io"
-OWNER="fo11ow-me"
-IMAGE_SERVER="${REGISTRY}/${OWNER}/mall-server"
-IMAGE_NGINX="${REGISTRY}/${OWNER}/mall-nginx"
+REGISTRY="${SERVER_HOST}:5000"
+IMAGE_SERVER="${REGISTRY}/mall/mall-server"
+IMAGE_NGINX="${REGISTRY}/mall/mall-nginx"
 
-echo "========== 1. 运行后端测试 =========="
-cd mall-server
-./mvnw test -q
-cd ..
+echo "========== 1. 检查前置条件 =========="
 
-echo "========== 2. 打包后端 JAR =========="
+if ! docker info > /dev/null 2>&1; then
+  echo "错误: Docker 未运行"
+  exit 1
+fi
+
+if [ -n "$(git status --porcelain)" ]; then
+  echo "错误: 工作区有未提交变更，请先 commit"
+  exit 1
+fi
+
+if ! ssh -o ConnectTimeout=5 -o BatchMode=yes "${SERVER_USER}@${SERVER_HOST}" echo ok > /dev/null 2>&1; then
+  echo "错误: 无法 SSH 连接到 ${SERVER_USER}@${SERVER_HOST}"
+  exit 1
+fi
+echo "Docker: ok  SSH: ok  Git: clean"
+
+echo ""
+echo "========== 2. 运行后端测试 =========="
+if $SKIP_TESTS; then
+  echo "跳过 (--skip-tests)"
+else
+  cd mall-server
+  ./mvnw test -q
+  cd ..
+  echo "Tests: passed"
+fi
+
+echo ""
+echo "========== 3. 打包后端 JAR =========="
 cd mall-server
 ./mvnw clean package -DskipTests -q
 cd ..
 
-echo "========== 3. 构建前端 =========="
+echo "========== 4. 构建前端 =========="
 cd mall-admin && npm run build 2>&1 | tail -1 && cd ..
 cd mall-portal && npm run build 2>&1 | tail -1 && cd ..
 
-echo "========== 4. 构建 Docker 镜像 (latest + ${SHA}) =========="
+echo ""
+echo "========== 5. 构建 Docker 镜像 (latest + ${SHA}) =========="
+echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY}" -u "${REGISTRY_USER}" --password-stdin > /dev/null 2>&1
+
 docker build --platform linux/amd64 \
-  -t ${IMAGE_SERVER}:latest \
-  -t ${IMAGE_SERVER}:${SHA} \
+  -t "${IMAGE_SERVER}:latest" \
+  -t "${IMAGE_SERVER}:${SHA}" \
   -f mall-server/Dockerfile mall-server/
 
 docker build --platform linux/amd64 \
-  -t ${IMAGE_NGINX}:latest \
-  -t ${IMAGE_NGINX}:${SHA} \
+  -t "${IMAGE_NGINX}:latest" \
+  -t "${IMAGE_NGINX}:${SHA}" \
   -f Dockerfile.nginx .
 
-echo "========== 5. 推送镜像到 Registry =========="
-docker push ${IMAGE_SERVER}:latest
-docker push ${IMAGE_SERVER}:${SHA}
-docker push ${IMAGE_NGINX}:latest
-docker push ${IMAGE_NGINX}:${SHA}
-
-echo "========== 6. 推送代码触发 CD 部署 =========="
-git push origin dev
-
-echo ""
-echo "========== 完成 =========="
-echo "镜像:"
 echo "  ${IMAGE_SERVER}:latest"
 echo "  ${IMAGE_SERVER}:${SHA}"
 echo "  ${IMAGE_NGINX}:latest"
 echo "  ${IMAGE_NGINX}:${SHA}"
+
 echo ""
-echo "CD 已触发，监控: https://github.com/${OWNER}/mall/actions"
+echo "========== 6. 推送镜像到 Registry =========="
+docker push "${IMAGE_SERVER}:latest"
+docker push "${IMAGE_SERVER}:${SHA}"
+docker push "${IMAGE_NGINX}:latest"
+docker push "${IMAGE_NGINX}:${SHA}"
+echo "推送完成"
+
+echo ""
+echo "清理本地旧标签..."
+ALL_TAGS=$(docker image ls --format '{{.Repository}}:{{.Tag}}' \
+  | grep "^${REGISTRY}/mall/" \
+  | grep -v ':latest' \
+  | sort)
+KEEP_COUNT=3
+COUNT=0
+echo "$ALL_TAGS" | while read -r tag; do
+  COUNT=$((COUNT + 1))
+  if [ $COUNT -gt $KEEP_COUNT ]; then
+    docker rmi "$tag" 2>/dev/null || true
+    echo "  删除: $tag"
+  fi
+done
+
+echo ""
+echo "========== 7. SSH 触发服务器部署 =========="
+ssh -o StrictHostKeyChecking=no \
+  "${SERVER_USER}@${SERVER_HOST}" \
+  "bash /opt/app/mall/deploy-server.sh"
+
+echo ""
+echo "========== 完成 =========="
+echo "当前版本: ${SHA}"
