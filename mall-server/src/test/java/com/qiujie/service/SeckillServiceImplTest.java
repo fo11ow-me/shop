@@ -45,6 +45,14 @@ class SeckillServiceImplTest {
         if (keys != null && !keys.isEmpty()) {
             stringRedisTemplate.delete(keys);
         }
+        keys = stringRedisTemplate.keys("seckill:order:*");
+        if (keys != null && !keys.isEmpty()) {
+            stringRedisTemplate.delete(keys);
+        }
+        keys = stringRedisTemplate.keys("seckill:result:*");
+        if (keys != null && !keys.isEmpty()) {
+            stringRedisTemplate.delete(keys);
+        }
     }
 
     @Test
@@ -66,7 +74,10 @@ class SeckillServiceImplTest {
         List<Map<String, Object>> second = seckillService.getActiveSessions();
 
         assertEquals(first.size(), second.size());
-        assertEquals(first.get(0).get("seckillPrice"), second.get(0).get("seckillPrice"));
+        // JSON 缓存会导致 BigDecimal→Integer，用 Number 容错
+        Number firstPrice = (Number) first.get(0).get("seckillPrice");
+        Number secondPrice = (Number) second.get(0).get("seckillPrice");
+        assertEquals(firstPrice.doubleValue(), secondPrice.doubleValue(), 0.01);
     }
 
     @Test

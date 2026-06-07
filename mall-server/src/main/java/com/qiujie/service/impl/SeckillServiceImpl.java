@@ -17,6 +17,7 @@ import com.qiujie.mq.SeckillMessage;
 import com.qiujie.service.SeckillService;
 import com.qiujie.util.RedisUtil;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -40,18 +41,18 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
     private final ProductMapper productMapper;
     private final ProductImgMapper productImgMapper;
     private final RedisUtil redisUtil;
-    private final RabbitTemplate rabbitTemplate;
+
+    @Autowired(required = false)
+    private RabbitTemplate rabbitTemplate;
 
     public SeckillServiceImpl(SeckillSessionMapper seckillSessionMapper,
                               ProductMapper productMapper,
                               ProductImgMapper productImgMapper,
-                              RedisUtil redisUtil,
-                              RabbitTemplate rabbitTemplate) {
+                              RedisUtil redisUtil) {
         this.seckillSessionMapper = seckillSessionMapper;
         this.productMapper = productMapper;
         this.productImgMapper = productImgMapper;
         this.redisUtil = redisUtil;
-        this.rabbitTemplate = rabbitTemplate;
     }
 
     @Override
@@ -166,6 +167,9 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
         message.setUserId(userId);
         message.setProductId(session.getProductId());
         message.setSeckillPrice(session.getSeckillPrice());
+        if (rabbitTemplate == null) {
+            throw new ServiceException(BusinessStatusEnum.ERROR);
+        }
         try {
             rabbitTemplate.convertAndSend(RabbitMQConfig.SECKILL_EXCHANGE,
                     RabbitMQConfig.SECKILL_ROUTING_KEY, message);
