@@ -63,6 +63,15 @@ public class RedisConstants {
     public static final String SECKILL_VOUCHER_ORDER = "order";
 
 
+    // 秒杀缓存
+
+    /** 秒杀活动场次缓存键 */
+    public static final String CACHE_SECKILL_ACTIVE_KEY = "cache:seckill:active";
+    /** 即将开始场次缓存键 */
+    public static final String CACHE_SECKILL_UPCOMING_KEY = "cache:seckill:upcoming";
+    /** 秒杀场次缓存 TTL（秒） */
+    public static final Long CACHE_SECKILL_SESSION_TTL = 30L;
+
     // 优惠券相关
 
     /**

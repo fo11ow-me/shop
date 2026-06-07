@@ -1,7 +1,5 @@
 package com.qiujie.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.qiujie.entity.Order;
 import com.qiujie.mapper.*;
 import com.qiujie.service.HomeService;
 import com.qiujie.service.UserService;
@@ -9,10 +7,11 @@ import com.qiujie.util.DatetimeUtil;
 import com.qiujie.vo.CategorySalesVO;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class HomeServiceImpl implements HomeService {
@@ -39,29 +38,18 @@ public class HomeServiceImpl implements HomeService {
         map.put("productCount", this.productMapper.selectCount(null));
         map.put("orderCount", this.orderMapper.selectCount(null));
 
-        // 今日订单统计
+        // 今日/昨日统计用聚合 SQL，避免拉全量订单到内存
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         LocalDateTime todayEnd = LocalDate.now().plusDays(1).atStartOfDay();
-        QueryWrapper<Order> todayWrapper = new QueryWrapper<>();
-        todayWrapper.ge("create_time", todayStart).lt("create_time", todayEnd);
-        List<Order> todayOrders = this.orderMapper.selectList(todayWrapper);
-        map.put("todayOrderCount", (long) todayOrders.size());
-        map.put("todaySales", todayOrders.stream()
-                .map(Order::getTotalAmount)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-        // 昨日订单统计
         LocalDateTime yesterdayStart = LocalDate.now().minusDays(1).atStartOfDay();
-        LocalDateTime yesterdayEnd = todayStart;
-        QueryWrapper<Order> yesterdayWrapper = new QueryWrapper<>();
-        yesterdayWrapper.ge("create_time", yesterdayStart).lt("create_time", yesterdayEnd);
-        List<Order> yesterdayOrders = this.orderMapper.selectList(yesterdayWrapper);
-        map.put("yesterdayOrderCount", (long) yesterdayOrders.size());
-        map.put("yesterdaySales", yesterdayOrders.stream()
-                .map(Order::getTotalAmount)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        Map<String, Object> todayStats = this.orderMapper.selectDailyStats(todayStart, todayEnd);
+        map.put("todayOrderCount", todayStats.get("orderCount"));
+        map.put("todaySales", todayStats.get("totalSales"));
+
+        Map<String, Object> yesterdayStats = this.orderMapper.selectDailyStats(yesterdayStart, todayStart);
+        map.put("yesterdayOrderCount", yesterdayStats.get("orderCount"));
+        map.put("yesterdaySales", yesterdayStats.get("totalSales"));
 
         return map;
     }

@@ -7,4 +7,5 @@ public interface ProductImgMapper extends BaseMapper<ProductImg> {
     List<ProductImg> selectByProductId(@Param("productId") Integer productId);
     List<ProductImg> selectByProductIds(@Param("productIds") List<Integer> productIds);
     ProductImg selectFirstByProductId(@Param("productId") Integer productId);
+    int insertBatch(@Param("imgs") List<ProductImg> imgs);
 }

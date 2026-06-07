@@ -3,7 +3,6 @@ package com.qiujie.service.impl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.qiujie.document.ProductDocument;
 import com.qiujie.entity.Category;
 import com.qiujie.entity.Product;
 import com.qiujie.entity.ProductImg;
@@ -14,6 +13,7 @@ import com.qiujie.mapper.CategoryMapper;
 import com.qiujie.mapper.ProductImgMapper;
 import com.qiujie.mapper.ProductMapper;
 import com.qiujie.repository.ProductSearchRepository;
+import com.qiujie.service.EsSyncService;
 import com.qiujie.service.ProductService;
 import com.qiujie.util.CacheClient;
 import com.qiujie.util.RedisUtil;
@@ -29,10 +29,12 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.qiujie.constants.RedisConstants.*;
 
@@ -52,19 +54,22 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     private final CacheClient cacheClient;
     private final StringRedisTemplate stringRedisTemplate;
     private final RedisUtil redisUtil;
+    private final EsSyncService esSyncService;
 
     @Autowired(required = false)
     private ProductSearchRepository productSearchRepository;
 
     public ProductServiceImpl(ProductMapper productMapper, CategoryMapper categoryMapper,
                               ProductImgMapper productImgMapper, CacheClient cacheClient,
-                              StringRedisTemplate stringRedisTemplate, RedisUtil redisUtil) {
+                              StringRedisTemplate stringRedisTemplate, RedisUtil redisUtil,
+                              EsSyncService esSyncService) {
         this.productMapper = productMapper;
         this.categoryMapper = categoryMapper;
         this.productImgMapper = productImgMapper;
         this.cacheClient = cacheClient;
         this.stringRedisTemplate = stringRedisTemplate;
         this.redisUtil = redisUtil;
+        this.esSyncService = esSyncService;
     }
 
     @Override
@@ -80,14 +85,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             item.put("category", cat);
             List<Product> products = productMapper.selectByCategoryIdLimit(cat.getId(), 8);
             item.put("products", products);
-            Map<Integer, String> productImages = new HashMap<>();
-            for (Product p : products) {
-                ProductImg img = productImgMapper.selectFirstByProductId(p.getId());
-                if (img != null) {
-                    productImages.put(p.getId(), img.getUrl());
-                }
-            }
-            item.put("productImages", productImages);
+            item.put("productImages", batchProductImages(products));
             return item;
         }).collect(java.util.stream.Collectors.toList());
         if (!result.isEmpty()) {
@@ -117,19 +115,12 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     public Map<String, Object> getByCategory(Integer categoryId, Integer current, Integer size) {
         Page<Product> page = new Page<>(current != null ? current : 1, size != null ? size : 10);
         var result = productMapper.selectPageByCategoryId(page, categoryId);
-        Map<Integer, String> productImages = new HashMap<>();
-        for (Product p : result.getRecords()) {
-            ProductImg img = productImgMapper.selectFirstByProductId(p.getId());
-            if (img != null) {
-                productImages.put(p.getId(), img.getUrl());
-            }
-        }
         Map<String, Object> data = new HashMap<>();
         data.put("records", result.getRecords());
         data.put("total", result.getTotal());
         data.put("current", result.getCurrent());
         data.put("size", result.getSize());
-        data.put("productImages", productImages);
+        data.put("productImages", batchProductImages(result.getRecords()));
         return data;
     }
 
@@ -168,19 +159,12 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     private Map<String, Object> searchFromMysql(String keyword, Integer current, Integer size) {
         Page<Product> page = new Page<>(current != null ? current : 1, size != null ? size : 10);
         var result = productMapper.selectPageByKeyword(page, keyword.trim());
-        Map<Integer, String> productImages = new HashMap<>();
-        for (Product p : result.getRecords()) {
-            ProductImg img = productImgMapper.selectFirstByProductId(p.getId());
-            if (img != null) {
-                productImages.put(p.getId(), img.getUrl());
-            }
-        }
         Map<String, Object> data = new HashMap<>();
         data.put("records", result.getRecords());
         data.put("total", result.getTotal());
         data.put("current", result.getCurrent());
         data.put("size", result.getSize());
-        data.put("productImages", productImages);
+        data.put("productImages", batchProductImages(result.getRecords()));
         return data;
     }
 
@@ -203,9 +187,14 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     public IPage<Product> listPage(Integer current, Integer size, String name, Integer status, Integer categoryId) {
         Page<Product> page = new Page<>(current, size);
         IPage<Product> result = productMapper.selectPageByName(page, name, status, categoryId);
-        for (Product p : result.getRecords()) {
-            ProductImg img = productImgMapper.selectFirstByProductId(p.getId());
-            if (img != null) p.setImages(List.of(img));
+        if (!result.getRecords().isEmpty()) {
+            List<Integer> productIds = result.getRecords().stream().map(Product::getId).toList();
+            List<ProductImg> allImgs = productImgMapper.selectByProductIds(productIds);
+            Map<Integer, List<ProductImg>> imgMap = allImgs.stream()
+                    .collect(Collectors.groupingBy(ProductImg::getProductId));
+            for (Product p : result.getRecords()) {
+                p.setImages(imgMap.getOrDefault(p.getId(), List.of()));
+            }
         }
         return result;
     }
@@ -219,14 +208,14 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             throw new ServiceException(BusinessStatusEnum.PARAM_ERROR);
         }
         save(product);
-        if (product.getImages() != null) {
+        if (product.getImages() != null && !product.getImages().isEmpty()) {
             for (ProductImg img : product.getImages()) {
                 img.setProductId(product.getId());
-                productImgMapper.insert(img);
             }
+            productImgMapper.insertBatch(product.getImages());
         }
         redisUtil.del(CACHE_HOME_KEY);
-        syncToEs(product);
+        esSyncService.syncToEs(product);
     }
 
     @Override
@@ -234,7 +223,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         boolean result = super.updateById(product);
         redisUtil.del(CACHE_HOME_KEY);
         redisUtil.del(CACHE_PRODUCT_KEY + product.getId());
-        syncToEs(product);
+        esSyncService.syncToEs(product);
         return result;
     }
 
@@ -243,7 +232,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         boolean result = super.removeById(id);
         redisUtil.del(CACHE_HOME_KEY);
         redisUtil.del(CACHE_PRODUCT_KEY + id);
-        deleteFromEs((Integer) id);
+        esSyncService.deleteFromEs((Integer) id);
         return result;
     }
 
@@ -257,42 +246,25 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             redisUtil.del(CACHE_HOME_KEY);
             redisUtil.del(CACHE_PRODUCT_KEY + id);
             if (product.getStatus() == ProductStatusEnum.ON_SHELF) {
-                syncToEs(product);
+                esSyncService.syncToEs(product);
             } else {
-                deleteFromEs(id);
+                esSyncService.deleteFromEs(id);
             }
         }
     }
 
-    private void syncToEs(Product product) {
-        if (productSearchRepository == null) return;
-        try {
-            if (product.getStatus() == ProductStatusEnum.ON_SHELF) {
-                ProductDocument doc = new ProductDocument();
-                doc.setId(product.getId());
-                doc.setName(product.getName());
-                doc.setDetail(product.getDetail());
-                doc.setPrice(product.getPrice());
-                doc.setStock(product.getStock());
-                doc.setCategoryId(product.getCategoryId());
-                doc.setStatus(product.getStatus().getCode());
-                doc.setCreateTime(product.getCreateTime());
-                ProductImg img = productImgMapper.selectFirstByProductId(product.getId());
-                if (img != null) {
-                    doc.setImage(img.getUrl());
-                }
-                productSearchRepository.save(doc);
-            }
-        } catch (Exception e) {
-            log.warn("ES 同步商品 {} 失败: {}", product.getId(), e.getMessage());
+    /**
+     * 批量查询商品首图，避免 N+1 查询
+     */
+    private Map<Integer, String> batchProductImages(List<Product> products) {
+        if (products == null || products.isEmpty()) {
+            return Collections.emptyMap();
         }
+        List<Integer> productIds = products.stream().map(Product::getId).distinct().toList();
+        List<ProductImg> imgs = productImgMapper.selectByProductIds(productIds);
+        return imgs.stream().collect(Collectors.toMap(
+                ProductImg::getProductId, ProductImg::getUrl, (a, b) -> a));
     }
 
-    private void deleteFromEs(Integer id) {
-        if (productSearchRepository == null) return;
-        try {
-            productSearchRepository.deleteById(id);
-        } catch (Exception ignored) {
-        }
-    }
+
 }

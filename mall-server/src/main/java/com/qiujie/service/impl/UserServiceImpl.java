@@ -134,11 +134,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public void imp(MultipartFile file) throws IOException {
         InputStream inputStream = file.getInputStream();
         List<User> list = HutoolExcelUtil.readExcel(inputStream, 1, User.class);
+        saveBatch(list);
         for (User user : list) {
-            save(user);
             user.setPassword(passwordEncoder.encode("123")).setCode("user_" + user.getId());
-            updateById(user);
         }
+        updateBatchById(list);
     }
 
     public void validate(String pwd, Integer id) {

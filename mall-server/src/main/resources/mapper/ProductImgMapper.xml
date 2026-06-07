@@ -25,4 +25,11 @@
         LIMIT 1
     </select>
 
+    <insert id="insertBatch" parameterType="list">
+        INSERT INTO pms_product_img (url, product_id) VALUES
+        <foreach collection="imgs" item="img" separator=",">
+            (#{img.url}, #{img.productId})
+        </foreach>
+    </insert>
+
 </mapper>

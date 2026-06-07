@@ -92,12 +92,21 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new ServiceException(BusinessStatusEnum.ORDER_EMPTY);
         }
 
+        // 批量查询商品，避免 N+1
+        List<Integer> productIds = selectedCarts.stream().map(CartVO::getProductId).distinct().toList();
+        Map<Integer, Product> productMap = productMapper.selectBatchIds(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
         BigDecimal totalAmount = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
 
         for (CartVO cart : selectedCarts) {
-            Product product = productMapper.selectById(cart.getProductId());
-            if (product == null || product.getStock() < cart.getAmount()) {
+            Product product = productMap.get(cart.getProductId());
+            if (product == null) {
+                throw new ServiceException(BusinessStatusEnum.PRODUCT_STOCK_INSUFFICIENT.getCode(), "商品[" + cart.getProductName() + "]不存在");
+            }
+            // 原子扣减库存
+            if (productMapper.decrementStock(product.getId(), cart.getAmount()) == 0) {
                 throw new ServiceException(BusinessStatusEnum.PRODUCT_STOCK_INSUFFICIENT.getCode(), "商品[" + cart.getProductName() + "]库存不足");
             }
             BigDecimal itemTotal = product.getPrice().multiply(new BigDecimal(cart.getAmount()));
@@ -110,9 +119,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             item.setProductImg(cart.getProductImg());
             item.setAmount(cart.getAmount());
             orderItems.add(item);
-
-            product.setStock(product.getStock() - cart.getAmount());
-            productMapper.updateById(product);
         }
 
         Order order = new Order();
@@ -149,10 +155,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new ServiceException(BusinessStatusEnum.PARAM_ERROR);
         }
 
-        Product product = productMapper.selectById(productId);
-        if (product == null || product.getStock() < amount) {
+        // 原子扣库存，WHERE stock >= amount 避免 TOCTOU 竞态
+        if (productMapper.decrementStock(productId, amount) == 0) {
             throw new ServiceException(BusinessStatusEnum.PRODUCT_STOCK_INSUFFICIENT);
         }
+
+        Product product = productMapper.selectById(productId);
 
         BigDecimal totalAmount = product.getPrice().multiply(new BigDecimal(amount));
 
@@ -178,9 +186,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         ProductImg firstImg = productImgMapper.selectFirstByProductId(product.getId());
         if (firstImg != null) item.setProductImg(firstImg.getUrl());
         orderItemMapper.insert(item);
-
-        product.setStock(product.getStock() - amount);
-        productMapper.updateById(product);
 
         order.setItems(List.of(item));
         return order;
@@ -298,11 +303,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     public void batchDeliver(List<Integer> ids) {
         List<Order> orders = listByIds(ids);
+        List<Order> toUpdate = new ArrayList<>();
         for (Order order : orders) {
             if (order.getStatus() == OrderStatusEnum.PAID) {
                 order.setStatus(OrderStatusEnum.SHIPPED);
-                updateById(order);
+                order.setDeliveryTime(LocalDateTime.now());
+                toUpdate.add(order);
             }
+        }
+        if (!toUpdate.isEmpty()) {
+            updateBatchById(toUpdate);
         }
     }
 

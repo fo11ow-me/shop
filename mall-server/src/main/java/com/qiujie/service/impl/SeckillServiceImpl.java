@@ -1,6 +1,6 @@
 package com.qiujie.service.impl;
 
-import static com.qiujie.constants.RedisConstants.SECKILL_STOCK_KEY;
+import static com.qiujie.constants.RedisConstants.*;
 
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -57,26 +57,48 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getActiveSessions() {
+        String cached = (String) redisUtil.get(CACHE_SECKILL_ACTIVE_KEY);
+        if (cached != null) {
+            return (List<Map<String, Object>>) (List<?>) JSONUtil.toList(cached, Map.class);
+        }
+
         List<SeckillSession> sessions = seckillSessionMapper.selectActiveSessions(LocalDateTime.now());
+        Map<Integer, Product> productMap = batchProducts(sessions);
+        Map<Integer, ProductImg> imgMap = batchProductImages(sessions);
+
         List<Map<String, Object>> result = new ArrayList<>();
         for (SeckillSession session : sessions) {
             String stockKey = SECKILL_STOCK_KEY + session.getId();
             if (redisUtil.get(stockKey) == null) {
                 redisUtil.set(stockKey, String.valueOf(session.getSeckillStock()));
             }
-            result.add(sessionToMap(session));
+            result.add(sessionToMap(session, productMap.get(session.getProductId()),
+                    imgMap.get(session.getProductId())));
         }
+        redisUtil.set(CACHE_SECKILL_ACTIVE_KEY, JSONUtil.toJsonStr(result), CACHE_SECKILL_SESSION_TTL);
         return result;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getUpcomingSessions() {
+        String cached = (String) redisUtil.get(CACHE_SECKILL_UPCOMING_KEY);
+        if (cached != null) {
+            return (List<Map<String, Object>>) (List<?>) JSONUtil.toList(cached, Map.class);
+        }
+
         List<SeckillSession> sessions = seckillSessionMapper.selectUpcomingSessions(LocalDateTime.now());
+        Map<Integer, Product> productMap = batchProducts(sessions);
+        Map<Integer, ProductImg> imgMap = batchProductImages(sessions);
+
         List<Map<String, Object>> result = new ArrayList<>();
         for (SeckillSession session : sessions) {
-            result.add(sessionToMap(session));
+            result.add(sessionToMap(session, productMap.get(session.getProductId()),
+                    imgMap.get(session.getProductId())));
         }
+        redisUtil.set(CACHE_SECKILL_UPCOMING_KEY, JSONUtil.toJsonStr(result), CACHE_SECKILL_SESSION_TTL);
         return result;
     }
 
@@ -136,7 +158,11 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
             throw new ServiceException(BusinessStatusEnum.SECKILL_STOCK_EMPTY);
         }
 
-        // 3. 发送消息到 RabbitMQ，异步创建订单
+        // 3. 失效秒杀缓存，确保下次查询获取最新库存
+        redisUtil.del(CACHE_SECKILL_ACTIVE_KEY);
+        redisUtil.del(CACHE_SECKILL_UPCOMING_KEY);
+
+        // 4. 发送消息到 RabbitMQ，异步创建订单
         SeckillMessage message = new SeckillMessage();
         message.setSessionId(sessionId);
         message.setUserId(userId);
@@ -159,16 +185,14 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
         return result;
     }
 
-    private Map<String, Object> sessionToMap(SeckillSession session) {
+    private Map<String, Object> sessionToMap(SeckillSession session, Product product, ProductImg img) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("sessionId", session.getId());
         map.put("productId", session.getProductId());
 
-        Product product = productMapper.selectById(session.getProductId());
         if (product != null) {
             map.put("productName", product.getName());
             map.put("productPrice", product.getPrice());
-            ProductImg img = productImgMapper.selectFirstByProductId(product.getId());
             if (img != null) {
                 map.put("productImg", img.getUrl());
             }
@@ -179,6 +203,30 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
         map.put("startTime", session.getStartTime());
         map.put("endTime", session.getEndTime());
         return map;
+    }
+
+    /**
+     * 批量查询秒杀场次关联的商品
+     */
+    private Map<Integer, Product> batchProducts(List<SeckillSession> sessions) {
+        if (sessions.isEmpty()) return Map.of();
+        List<Integer> productIds = sessions.stream()
+                .map(SeckillSession::getProductId).distinct().toList();
+        return productMapper.selectBatchIds(productIds).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        Product::getId, p -> p, (a, b) -> a));
+    }
+
+    /**
+     * 批量查询秒杀场次关联的商品首图
+     */
+    private Map<Integer, ProductImg> batchProductImages(List<SeckillSession> sessions) {
+        if (sessions.isEmpty()) return Map.of();
+        List<Integer> productIds = sessions.stream()
+                .map(SeckillSession::getProductId).distinct().toList();
+        List<ProductImg> imgs = productImgMapper.selectByProductIds(productIds);
+        return imgs.stream().collect(java.util.stream.Collectors.toMap(
+                ProductImg::getProductId, img -> img, (a, b) -> a));
     }
 
     private Integer getRemainingStock(Integer sessionId, Integer dbStock) {
