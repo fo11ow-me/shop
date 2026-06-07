@@ -2,6 +2,11 @@ services:
   mysql:
     image: mysql:8.0
     container_name: mall-mysql
+    mem_limit: 1g
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     ports:
       - "3306:3306"
     environment:
@@ -15,6 +20,11 @@ services:
   redis:
     image: redis:7-alpine
     container_name: mall-redis
+    mem_limit: 256m
+    deploy:
+      resources:
+        limits:
+          memory: 256m
     ports:
       - "6379:6379"
     command: redis-server --requirepass ${REDIS_PASSWORD:-123456}
@@ -25,6 +35,11 @@ services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: mall-rabbitmq
+    mem_limit: 256m
+    deploy:
+      resources:
+        limits:
+          memory: 256m
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -38,6 +53,11 @@ services:
   elasticsearch:
     image: elasticsearch:7.17.18
     container_name: mall-elasticsearch
+    mem_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     ports:
       - "9200:9200"
       - "9300:9300"

@@ -2,6 +2,11 @@ services:
   mall-mysql:
     image: mysql:8.0
     container_name: mall-mysql
+    mem_limit: 1g
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: mall
@@ -13,12 +18,24 @@ services:
       - /etc/localtime:/etc/localtime:ro
     networks:
       - my_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   mall-redis:
     image: redis:7-alpine
     container_name: mall-redis
+    mem_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     command: redis-server --requirepass ${REDIS_PASSWORD}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
       - "6380:6379"
     volumes:
@@ -26,21 +43,41 @@ services:
       - /etc/localtime:/etc/localtime:ro
     networks:
       - my_network
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $REDIS_PASSWORD ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   mall-rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: mall-rabbitmq
+    mem_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     environment:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     networks:
       - my_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   mall-elasticsearch:
     image: elasticsearch:7.17.18
     container_name: mall-elasticsearch
+    mem_limit: 1g
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     environment:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms256m -Xmx256m
@@ -51,9 +88,16 @@ services:
   mall-server:
     image: ghcr.io/fo11ow-me/mall-server:latest
     container_name: mall-server
+    mem_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     depends_on:
-      - mall-mysql
-      - mall-redis
+      mall-mysql:
+        condition: service_healthy
+      mall-redis:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_PASSWORD: ${DB_PASSWORD}
@@ -77,6 +121,11 @@ services:
   mall-nginx:
     image: ghcr.io/fo11ow-me/mall-nginx:latest
     container_name: mall-nginx
+    mem_limit: 256m
+    deploy:
+      resources:
+        limits:
+          memory: 256m
     depends_on:
       - mall-server
     ports:
