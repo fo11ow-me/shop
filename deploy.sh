@@ -36,8 +36,8 @@ if ! docker info > /dev/null 2>&1; then
   exit 1
 fi
 
-if [ -n "$(git status --porcelain)" ]; then
-  echo "错误: 工作区有未提交变更，请先 commit"
+if [ -n "$(git status --porcelain | grep '^?')" ]; then
+  echo "错误: 工作区有未跟踪的新文件，请先 commit"
   exit 1
 fi
 
