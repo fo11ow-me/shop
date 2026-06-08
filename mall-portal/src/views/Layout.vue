@@ -45,6 +45,9 @@
             <li class="nav-item">
               <router-link to="/" class="nav-link" exact-active-class="active">首页</router-link>
             </li>
+            <li class="nav-item">
+              <router-link to="/seckill" class="nav-link seckill-nav" active-class="active">限时秒杀</router-link>
+            </li>
             <li v-for="cat in rootCategories" :key="cat.id" class="nav-item"
               @mouseenter="hoverCat = cat.id" @mouseleave="hoverCat = null">
               <router-link :to="`/category/${cat.id}`" class="nav-link" :class="{ active: isCatActive(cat.id) }">
@@ -192,6 +195,9 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
 .nav-link { display: block; padding: 12px 24px; font-size: 15px; color: #333; text-decoration: none;
   font-weight: 500; transition: color .2s; white-space: nowrap; }
 .nav-link:hover, .nav-link.active { color: #A10000; }
+.nav-link.seckill-nav { color: #A10000; font-weight: 600; position: relative; }
+.nav-link.seckill-nav::before { content: '⚡'; margin-right: 4px; font-size: 13px; }
+.nav-link.seckill-nav:hover { color: #C10000; }
 .nav-link .arrow { font-size: 10px; margin-left: 2px; }
 
 /* Sub nav dropdown */
