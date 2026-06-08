@@ -67,19 +67,15 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import axios from 'axios'
+import { useRouter } from 'vue-router'
+import request from '@/utils/request'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { getImageUrl } from '@/api/product'
 import { Clock } from '@element-plus/icons-vue'
 
+const router = useRouter()
 const authStore = useAuthStore()
-const api = axios.create({ baseURL: '/dev', timeout: 10000 })
-api.interceptors.request.use(config => {
-  const token = authStore.token
-  if (token) config.headers.Authorization = 'Bearer ' + token
-  return config
-})
 
 const activeSessions = ref([])
 const upcomingSessions = ref([])
@@ -89,23 +85,34 @@ const resultSuccess = ref(false)
 const resultMsg = ref('')
 let countdownTimer = null
 let pollTimer = null
+let serverOffset = 0
 
-onMounted(() => loadSessions())
+onMounted(async () => {
+  try {
+    const start = Date.now()
+    const res = await request.get('/seckill/server-time')
+    const roundTrip = Date.now() - start
+    serverOffset = (res.data - (start + roundTrip / 2)) / 1000
+  } catch { serverOffset = 0 }
+  loadSessions()
+})
+
+function serverNow() { return new Date(Date.now() + serverOffset * 1000) }
 onUnmounted(() => { clearInterval(countdownTimer); clearInterval(pollTimer) })
 
 function loadSessions() {
   loading.value = true
-  api.get('/seckill/sessions').then(res => {
-    const list = res.data.data || []
-    const now = Date.now()
+  request.get('/seckill/sessions').then(res => {
+    const list = res.data || []
+    const now = serverNow().getTime()
     activeSessions.value = list.map(s => ({
       ...s, pending: false,
       countdown: Math.max(0, Math.floor((new Date(s.endTime).getTime() - now) / 1000))
     }))
     startCountdown()
   }).catch(() => { ElMessage.error('加载秒杀活动失败') })
-  api.get('/seckill/sessions/upcoming').then(res => {
-    upcomingSessions.value = res.data.data || []
+  request.get('/seckill/sessions/upcoming').then(res => {
+    upcomingSessions.value = res.data || []
   }).catch(() => { ElMessage.error('加载即将开始的秒杀失败') }).finally(() => { loading.value = false })
 }
 
@@ -124,13 +131,13 @@ function startCountdown() {
 }
 
 function execute(sessionId) {
-  if (!authStore.isLogin) { window.location.hash = '#/login'; return }
+  if (!authStore.isLogin) { router.push('/login'); return }
   activeSessions.value = activeSessions.value.map(s => s.sessionId === sessionId ? { ...s, pending: true } : s)
-  api.post('/seckill/execute', null, { params: { sessionId } }).then(() => {
+  request.post('/seckill/execute', null, { params: { sessionId } }).then(() => {
     startPolling(sessionId)
   }).catch(err => {
     activeSessions.value = activeSessions.value.map(s => s.sessionId === sessionId ? { ...s, pending: false } : s)
-    showResultMsg(false, err.response?.data?.message || '秒杀失败')
+    showResultMsg(false, err?.message || '秒杀失败')
   })
 }
 
@@ -144,8 +151,8 @@ function startPolling(sessionId) {
       showResultMsg(false, '排队超时，请查看订单')
       return
     }
-    api.get(`/seckill/result/${sessionId}`).then(res => {
-      const data = res.data.data
+    request.get(`/seckill/result/${sessionId}`).then(res => {
+      const data = res.data
       if (data?.status === 1) {
         clearInterval(pollTimer)
         activeSessions.value = activeSessions.value.map(s => s.sessionId === sessionId ? { ...s, pending: false } : s)

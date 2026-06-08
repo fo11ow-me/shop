@@ -85,4 +85,15 @@ public class SeckillController {
         Integer userId = jwtUtil.extractUserId(token, "/portal");
         return Response.success(seckillService.getResult(sessionId, userId));
     }
+
+    /**
+     * 服务端时间戳（供前端校准倒计时）
+     *
+     * @return 当前时间的毫秒时间戳
+     */
+    @Operation(summary = "服务端时间")
+    @GetMapping("/server-time")
+    public ResponseDTO<Long> serverTime() {
+        return Response.success(System.currentTimeMillis());
+    }
 }

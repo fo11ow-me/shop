@@ -70,7 +70,7 @@ public class SecurityConfig {
                         .requestMatchers("/portal/product/**").permitAll()
                         .requestMatchers("/portal/auth/logout").permitAll()
                         .requestMatchers("/portal/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/portal/seckill/sessions", "/portal/seckill/sessions/upcoming").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/portal/seckill/sessions", "/portal/seckill/sessions/upcoming", "/portal/seckill/server-time").permitAll()
                         .requestMatchers("/admin/auth/logout").permitAll()
                         .requestMatchers("/admin/auth/**").permitAll()
                         .requestMatchers("/portal/**").authenticated()
