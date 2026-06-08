@@ -32,7 +32,7 @@ if [ "$ACTION" = "rollback" ]; then
 fi
 
 echo "========== 1. 快照当前镜像 =========="
-echo "${REGISTRY_PASSWORD}" | docker login localhost:5000 -u "${REGISTRY_USER}" --password-stdin > /dev/null 2>&1 || true
+echo "${REGISTRY_PASSWORD:-}" | docker login localhost:5000 -u "${REGISTRY_USER:-}" --password-stdin > /dev/null 2>&1 || true
 docker tag localhost:5000/mall/mall-server:latest localhost:5000/mall/mall-server:rollback 2>/dev/null || true
 docker tag localhost:5000/mall/mall-nginx:latest localhost:5000/mall/mall-nginx:rollback 2>/dev/null || true
 echo "快照: rollback"
@@ -41,30 +41,30 @@ echo "========== 2. 拉取最新镜像 =========="
 docker compose pull mall-server mall-nginx
 
 echo "========== 3. 重启容器 =========="
-docker compose up -d --no-deps mall-server mall-nginx
+docker compose up -d mall-server mall-nginx
 
 echo "========== 4. 等待启动 =========="
 sleep 10
 
 echo "========== 5. 健康检查 =========="
 for i in $(seq 1 10); do
-  STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost/health)
-  if [ "$STATUS" = "200" ]; then
+  HEALTH=$(docker exec mall-nginx curl -s --max-time 5 http://mall-server:8800/actuator/health/liveness)
+  if echo "$HEALTH" | grep -q '"status":"UP"'; then
     echo "健康检查通过 (第 ${i} 次)"
     break
   fi
   if [ "$i" -eq 10 ]; then
-    echo "健康检查失败"
+    echo "健康检查失败: ${HEALTH}"
     rollback ""
     exit 1
   fi
-  echo "第 ${i} 次: status=${STATUS}, 重试..."
+  echo "第 ${i} 次: ${HEALTH}, 重试..."
   sleep 5
 done
 
 echo "========== 6. 前端验证 =========="
-HTTP_PORTAL=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost/)
-HTTP_ADMIN=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost/admin/)
+HTTP_PORTAL=$(docker exec mall-nginx curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://mall-server:8800)
+HTTP_ADMIN=$(docker exec mall-nginx curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://mall-server:8800/admin/)
 if [ "$HTTP_PORTAL" != "200" ]; then
   echo "门户验证失败: ${HTTP_PORTAL}"
   rollback ""
