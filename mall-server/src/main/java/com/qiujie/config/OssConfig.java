@@ -2,6 +2,7 @@ package com.qiujie.config;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,7 @@ public class OssConfig {
     private String bucketName;
 
     @Bean
+    @ConditionalOnExpression("!'${aliyun.oss.access-key-id:}'.isEmpty()")
     public OSS ossClient() {
         return new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
     }
@@ -28,4 +30,9 @@ public class OssConfig {
     public void setAccessKeySecret(String accessKeySecret) { this.accessKeySecret = accessKeySecret; }
     public String getBucketName() { return bucketName; }
     public void setBucketName(String bucketName) { this.bucketName = bucketName; }
+
+    @Override
+    public String toString() {
+        return "OssConfig{endpoint='" + endpoint + "', bucketName='" + bucketName + "', accessKeyId=***}";
+    }
 }

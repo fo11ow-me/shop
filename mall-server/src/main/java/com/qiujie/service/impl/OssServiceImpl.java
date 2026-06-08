@@ -8,6 +8,7 @@ import com.qiujie.config.OssConfig;
 import com.qiujie.enums.BusinessStatusEnum;
 import com.qiujie.exception.ServiceException;
 import com.qiujie.service.OssService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
+@ConditionalOnExpression("!'${aliyun.oss.access-key-id:}'.isEmpty()")
 public class OssServiceImpl implements OssService {
 
     private final OSS ossClient;
