@@ -7,16 +7,12 @@ export default defineConfig({
   plugins: [vue(), UnoCSS()],
   server: {
     host: 'localhost',
-    port: 3016,
+    port: 3002,
     proxy: {
-      '/dev': {
+      '/admin-api': {
         target: 'http://localhost:8800',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/dev/, '/admin')
-      },
-      '/api': {
-        target: 'http://localhost:8800',
-        changeOrigin: true
+        rewrite: (path) => path.replace(/^\/admin-api/, '/admin')
       }
     }
   },
