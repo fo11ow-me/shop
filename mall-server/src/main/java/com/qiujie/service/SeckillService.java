@@ -1,5 +1,7 @@
 package com.qiujie.service;
 
+import com.qiujie.entity.SeckillSession;
+
 import java.util.List;
 import java.util.Map;
 
@@ -40,4 +42,18 @@ public interface SeckillService {
      * @return { status: 0=排队中, 1=成功, -1=失败, msg: 描述 }
      */
     Map<String, Object> getResult(Integer sessionId, Integer userId);
+
+    // ========== 后台管理 CRUD ==========
+
+    /** 秒杀场次分页列表 */
+    Map<String, Object> listPage(Integer current, Integer size, Integer status);
+
+    /** 创建秒杀场次，同时初始化 Redis 库存 */
+    void create(SeckillSession session);
+
+    /** 更新秒杀场次，同步失效相关缓存 */
+    void updateSession(SeckillSession session);
+
+    /** 删除秒杀场次（逻辑删除），已结束的不允许 */
+    void deleteSession(Integer id);
 }

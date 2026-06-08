@@ -3,6 +3,8 @@ package com.qiujie.service.impl;
 import static com.qiujie.constants.RedisConstants.*;
 
 import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.qiujie.config.RabbitMQConfig;
 import com.qiujie.entity.Product;
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -133,13 +136,15 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
             end
 
             -- 检查库存
-            local stock = tonumber(redis.call('GET', stockKey) or '0')
+            local raw = redis.call('GET', stockKey) or '0'
+            raw = raw:gsub('"', '')
+            local stock = tonumber(raw)
             if stock <= 0 then
                 return -2  -- 库存不足
             end
 
-            -- 扣减库存 + 标记用户
-            redis.call('DECR', stockKey)
+            -- 修正被 JSON 序列化污染的库存值，然后扣减
+            redis.call('SET', stockKey, stock - 1)
             redis.call('SET', orderKey, '1', 'EX', orderTtl)
             return 1  -- 秒杀成功
             """;
@@ -192,6 +197,66 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
         result.put("status", 0);
         result.put("msg", "排队中");
         return result;
+    }
+
+    @Override
+    public Map<String, Object> listPage(Integer current, Integer size, Integer status) {
+        Page<SeckillSession> page = new Page<>(current, size);
+        IPage<SeckillSession> result = seckillSessionMapper.selectPage(page, null);
+        Map<String, Object> data = new HashMap<>();
+        data.put("records", result.getRecords());
+        data.put("total", result.getTotal());
+        data.put("current", result.getCurrent());
+        data.put("size", result.getSize());
+        return data;
+    }
+
+    @Override
+    public void create(SeckillSession session) {
+        if (session.getSeckillPrice() == null || session.getSeckillStock() == null
+                || session.getStartTime() == null || session.getEndTime() == null) {
+            throw new ServiceException(BusinessStatusEnum.PARAM_ERROR);
+        }
+        Product product = productMapper.selectById(session.getProductId());
+        if (product == null) {
+            throw new ServiceException(BusinessStatusEnum.PRODUCT_NOT_EXIST);
+        }
+        seckillSessionMapper.insert(session);
+        // 初始化 Redis 库存
+        redisUtil.set(SECKILL_STOCK_KEY + session.getId(), String.valueOf(session.getSeckillStock()));
+        redisUtil.del(CACHE_SECKILL_ACTIVE_KEY);
+        redisUtil.del(CACHE_SECKILL_UPCOMING_KEY);
+    }
+
+    @Override
+    public void updateSession(SeckillSession session) {
+        SeckillSession existing = seckillSessionMapper.selectById(session.getId());
+        if (existing == null) {
+            throw new ServiceException(BusinessStatusEnum.SECKILL_SESSION_NOT_EXIST);
+        }
+        if (existing.getEndTime().isBefore(LocalDateTime.now())) {
+            throw new ServiceException(BusinessStatusEnum.SECKILL_SESSION_EXPIRED);
+        }
+        seckillSessionMapper.updateById(session);
+        // 同步缓存
+        redisUtil.set(SECKILL_STOCK_KEY + session.getId(), String.valueOf(session.getSeckillStock()));
+        redisUtil.del(CACHE_SECKILL_ACTIVE_KEY);
+        redisUtil.del(CACHE_SECKILL_UPCOMING_KEY);
+    }
+
+    @Override
+    public void deleteSession(Integer id) {
+        SeckillSession session = seckillSessionMapper.selectById(id);
+        if (session == null) {
+            throw new ServiceException(BusinessStatusEnum.SECKILL_SESSION_NOT_EXIST);
+        }
+        if (session.getEndTime().isBefore(LocalDateTime.now())) {
+            throw new ServiceException(BusinessStatusEnum.SECKILL_SESSION_EXPIRED);
+        }
+        seckillSessionMapper.deleteById(id);
+        redisUtil.del(SECKILL_STOCK_KEY + id);
+        redisUtil.del(CACHE_SECKILL_ACTIVE_KEY);
+        redisUtil.del(CACHE_SECKILL_UPCOMING_KEY);
     }
 
     private Map<String, Object> sessionToMap(SeckillSession session, Product product, ProductImg img) {
