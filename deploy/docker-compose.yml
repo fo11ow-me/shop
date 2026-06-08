@@ -1,0 +1,75 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mall-mysql
+    mem_limit: 1g
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_DATABASE: mall
+    volumes:
+      - ../sql/mall.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - mall-mysql-data:/var/lib/mysql
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: mall-redis
+    mem_limit: 256m
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-123456}
+    volumes:
+      - mall-redis-data:/data
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: mall-rabbitmq
+    mem_limit: 256m
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-123456}
+    volumes:
+      - mall-rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  elasticsearch:
+    image: elasticsearch:7.17.18
+    container_name: mall-elasticsearch
+    mem_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - "discovery.type=single-node"
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    volumes:
+      - mall-es-data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+
+volumes:
+  mall-mysql-data:
+  mall-redis-data:
+  mall-rabbitmq-data:
+  mall-es-data:
