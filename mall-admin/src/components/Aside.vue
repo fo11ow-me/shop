@@ -1,7 +1,7 @@
 <template>
   <div class="h-full flex flex-col bg-#304156 overflow-hidden">
     <div class="h-50px flex items-center justify-center gap-8px bg-#2b3a4a border-b border-white/6 flex-shrink-0 overflow-hidden px-10px" :class="{ '!p-0': isCollapsed }">
-      <img src="@/assets/img/logo.png" class="w-28px h-28px flex-shrink-0" />
+      <img src="@/assets/img/favicon.png" class="w-28px h-28px flex-shrink-0" />
       <span v-show="!isCollapsed" class="text-white text-16px font-600 whitespace-nowrap tracking-1px">商城后台</span>
     </div>
 

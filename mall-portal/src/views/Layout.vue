@@ -4,7 +4,7 @@
     <header class="header" :class="{ 'is-sticky': isSticky }">
       <div class="header-top wrapper">
         <router-link to="/" class="logo">
-          <img :src="logoImg" alt="最家家居" />
+          <img src="/logo.png" alt="最家家居" />
         </router-link>
 
         <div class="header-actions">
@@ -93,7 +93,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Search, ShoppingCart } from '@element-plus/icons-vue'
-import logoImg from '@/assets/img/logo.png'
+
 import foot1 from '@/assets/img/footer-quality.png'
 import foot2 from '@/assets/img/footer-privacy.png'
 import foot3 from '@/assets/img/footer-returns.png'

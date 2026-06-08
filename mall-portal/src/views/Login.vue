@@ -4,7 +4,7 @@
       <!-- Left: Brand -->
       <div class="auth-brand">
         <router-link to="/" class="brand-logo">
-          <img :src="logoImg" alt="最家家居" />
+          <img src="/logo.png" alt="最家家居" />
         </router-link>
         <h1>欢迎回来</h1>
         <p>登录您的账号，发现更多家居好物</p>
@@ -48,7 +48,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, Lock, Check } from '@element-plus/icons-vue'
-import logoImg from '@/assets/img/logo.png'
+
 import { useAuthStore } from '@/stores/auth'
 import { login, getVerificationCode } from '../api'
 
