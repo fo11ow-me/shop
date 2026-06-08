@@ -5,7 +5,7 @@ set -euo pipefail
 
 cd /opt/app/mall
 COMPOSE_FILE="docker-compose.server.yml"
-DOCKER_COMPOSE="${DOCKER_COMPOSE} -f ${COMPOSE_FILE}"
+DOCKER_COMPOSE="docker compose -f ${COMPOSE_FILE}"
 
 # 加载 .env
 if [ -f .env ]; then
