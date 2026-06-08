@@ -63,8 +63,8 @@ for i in $(seq 1 10); do
 done
 
 echo "========== 6. 前端验证 =========="
-HTTP_PORTAL=$(docker exec mall-nginx curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://mall-server:8800)
-HTTP_ADMIN=$(docker exec mall-nginx curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://mall-server:8800/admin/)
+HTTP_PORTAL=$(docker exec mall-nginx curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost/)
+HTTP_ADMIN=$(docker exec mall-nginx curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost/admin/)
 if [ "$HTTP_PORTAL" != "200" ]; then
   echo "门户验证失败: ${HTTP_PORTAL}"
   rollback ""
