@@ -145,8 +145,6 @@ services:
           memory: 256m
     depends_on:
       - mall-server
-    ports:
-      - "80:80"
     networks:
       - my_network
     restart: unless-stopped
