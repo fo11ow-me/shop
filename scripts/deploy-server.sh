@@ -4,6 +4,8 @@
 set -euo pipefail
 
 cd /opt/app/mall
+COMPOSE_FILE="docker-compose.server.yml"
+DOCKER_COMPOSE="${DOCKER_COMPOSE} -f ${COMPOSE_FILE}"
 
 # 加载 .env
 if [ -f .env ]; then
@@ -22,7 +24,7 @@ rollback() {
   fi
   docker tag localhost:5000/mall/mall-server:rollback localhost:5000/mall/mall-server:latest 2>/dev/null || true
   docker tag localhost:5000/mall/mall-nginx:rollback localhost:5000/mall/mall-nginx:latest 2>/dev/null || true
-  docker compose up -d --no-deps mall-server mall-nginx
+  ${DOCKER_COMPOSE} up -d --no-deps mall-server mall-nginx
   echo "回滚完成"
 }
 
@@ -38,10 +40,10 @@ docker tag localhost:5000/mall/mall-nginx:latest localhost:5000/mall/mall-nginx:
 echo "快照: rollback"
 
 echo "========== 2. 拉取最新镜像 =========="
-docker compose pull mall-server mall-nginx
+${DOCKER_COMPOSE} pull mall-server mall-nginx
 
 echo "========== 3. 重启容器 =========="
-docker compose up -d mall-server mall-nginx
+${DOCKER_COMPOSE} up -d mall-server mall-nginx
 
 echo "========== 4. 等待启动 =========="
 sleep 10
