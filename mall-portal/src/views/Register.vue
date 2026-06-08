@@ -3,7 +3,7 @@
     <div class="auth-container">
       <div class="auth-brand">
         <router-link to="/" class="brand-logo">
-          <img :src="logoImg" alt="最家家居" />
+          <img src="/logo.png" alt="最家家居" />
         </router-link>
         <h1>加入我们</h1>
         <p>注册账号，开启品质家居之旅</p>
@@ -53,13 +53,14 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Check } from '@element-plus/icons-vue'
-import logoImg from '@/assets/img/logo.png'
+
 import { register, getVerificationCode } from '../api'
 
 const router = useRouter()
 const formRef = ref(null)
 const loading = ref(false)
 const verificationCodeImg = ref('')
+let verificationUuid = ''
 const form = reactive({ code: '', password: '', confirmPwd: '', phone: '', verificationCode: '' })
 const validateConfirmPwd = (rule, value, callback) => {
   if (value !== form.password) { callback(new Error('两次密码不一致')) } else { callback() }
@@ -89,8 +90,9 @@ const rules = {
 
 const refreshCode = async () => {
   try {
-    const res = await getVerificationCode()
-    const url = URL.createObjectURL(res.data)
+    const { blob, uuid } = await getVerificationCode()
+    verificationUuid = uuid || ''
+    const url = URL.createObjectURL(blob)
     verificationCodeImg.value = url
     const img = new Image()
     img.onload = () => URL.revokeObjectURL(url)
@@ -103,7 +105,7 @@ const handleRegister = async () => {
   if (!valid) return
   loading.value = true
   try {
-    await register(form)
+    await register({ ...form, uuid: verificationUuid })
     ElMessage.success('注册成功，请登录')
     router.push('/login')
   } finally { loading.value = false }
