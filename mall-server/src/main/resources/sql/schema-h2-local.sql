@@ -100,8 +100,8 @@ CREATE TABLE IF NOT EXISTS oms_cart (
 -- Seed data (idempotent via MERGE)
 
 MERGE INTO sys_user (id, code, name, pwd, phone, email, role, status, is_deleted) KEY(id) VALUES
-(1, 'admin', '管理员', '$2a$10$ZqZA72kYQbX4mcxfTYXoEuN.xKUNQCXYWpYpkkjwRjZGyfkEG6.He', '13800000000', 'admin@mall.com', 1, 1, 0),
-(2, 'user', '测试用户', '$2a$10$ZqZA72kYQbX4mcxfTYXoEuN.xKUNQCXYWpYpkkjwRjZGyfkEG6.He', '13900000000', 'user@mall.com', 0, 1, 0);
+(1, 'admin', '管理员', '$2a$10$KvX..zmoCRYW1m72ZyLBNeY2j/mfRa.QcvPB5bIueg.RILcdIpqDq', '13800000000', 'admin@mall.com', 1, 1, 0),
+(2, 'user', '测试用户', '$2a$10$KvX..zmoCRYW1m72ZyLBNeY2j/mfRa.QcvPB5bIueg.RILcdIpqDq', '13900000000', 'user@mall.com', 0, 1, 0);
 
 -- 一级分类
 MERGE INTO pms_category (id, name, parent_id, is_deleted) KEY(id) VALUES

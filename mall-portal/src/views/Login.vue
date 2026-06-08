@@ -48,7 +48,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, Lock, Check } from '@element-plus/icons-vue'
-import logoImg from '@/assets/img/mall.png'
+import logoImg from '@/assets/img/logo.png'
 import { useAuthStore } from '@/stores/auth'
 import { login, getVerificationCode } from '../api'
 
@@ -58,7 +58,7 @@ const formRef = ref(null)
 const loading = ref(false)
 const verificationCodeImg = ref('')
 let verificationUuid = ''
-const form = reactive({ code: 'admin', password: 'admin123', verificationCode: '' })
+const form = reactive({ code: 'admin', password: '123', verificationCode: '' })
 const rules = {
   code: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],

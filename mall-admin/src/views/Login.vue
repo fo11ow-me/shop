@@ -31,7 +31,7 @@ const loading = ref(false)
 const codeUrl = ref('')
 const formRef = ref(null)
 let verificationUuid = ''
-const form = reactive({ code: 'admin', password: '123456', verificationCode: '' })
+const form = reactive({ code: 'admin', password: '123', verificationCode: '' })
 const rules = { code: [{ required: true, message: '请输入用户名' }], password: [{ required: true, message: '请输入密码' }], verificationCode: [{ required: true, message: '请输入验证码' }] }
 
 function refreshCode() {

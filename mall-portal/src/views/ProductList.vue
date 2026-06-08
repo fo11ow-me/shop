@@ -38,7 +38,7 @@
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import tempBanner1 from '@/assets/img/temp/banner1.jpg'
+import tempBanner1 from '@/assets/img/temp/category-banner.jpg'
 import { getProductsByCategory, getCategories } from '../api'
 import ProductCard from '../components/ProductCard.vue'
 

@@ -53,7 +53,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Check } from '@element-plus/icons-vue'
-import logoImg from '@/assets/img/mall.png'
+import logoImg from '@/assets/img/logo.png'
 import { register, getVerificationCode } from '../api'
 
 const router = useRouter()

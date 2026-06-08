@@ -25,9 +25,9 @@ import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { CircleCheckFilled } from '@element-plus/icons-vue'
 import { payOrder } from '@/api/order'
-import way01 from '@/assets/img/temp/way01.jpg'
-import way02 from '@/assets/img/temp/way02.jpg'
-import way03 from '@/assets/img/temp/way03.jpg'
+import way01 from '@/assets/img/temp/payment-alipay.jpg'
+import way02 from '@/assets/img/temp/payment-wechat.jpg'
+import way03 from '@/assets/img/temp/payment-card.jpg'
 
 const props = defineProps({
   visible: Boolean,
