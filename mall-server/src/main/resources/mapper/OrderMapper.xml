@@ -94,12 +94,12 @@
     </select>
 
     <select id="selectTrendData" resultType="java.util.Map">
-        SELECT DATE_FORMAT(create_time, '%Y-%m-%d') AS `date`,
+        SELECT CAST(create_time AS DATE) AS `date`,
                COUNT(*) AS orderCount,
                COALESCE(SUM(total_amount), 0) AS sales
         FROM oms_order
-        WHERE is_deleted = 0 AND create_time &gt;= DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
-        GROUP BY DATE_FORMAT(create_time, '%Y-%m-%d')
+        WHERE is_deleted = 0 AND create_time &gt;= DATE_SUB(CURRENT_DATE, INTERVAL #{days} DAY)
+        GROUP BY CAST(create_time AS DATE)
         ORDER BY `date` ASC
     </select>
 

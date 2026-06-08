@@ -5,43 +5,33 @@ spring:
       - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
       - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration
   datasource:
-    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:sql/schema-h2-local.sql
-      encoding: utf-8
-      continue-on-error: true
-  servlet:
-    multipart:
-      enabled: true
-      max-file-size: 20MB
-      max-request-size: 30MB
-
-  rabbitmq:
-    password: ${RABBITMQ_PASSWORD:123456}
+    url: jdbc:mysql://localhost:3306/mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
   data:
     redis:
       host: localhost
       port: 6379
-      password: ${REDIS_PASSWORD:123456}
-      database: 0
-      lettuce:
-        pool:
-          max-idle: 16
-          max-active: 32
-          min-idle: 8
+      password: 123456
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: 123456
+  elasticsearch:
+    uris: http://localhost:9200
 
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
 
+jwt:
+  admin-secret: OjKBJybhfKfTSA+3ccyBaJD+3TzxVN/FmhF5jFlshrs=
+  portal-secret: Tunyyqt8Sjeu1DJ9HvGie2e9aVBa23Z3w5eYDeHnoF0=
+
 aliyun:
   oss:
     endpoint: oss-cn-guangzhou.aliyuncs.com
-    access-key-id: ${OSS_ACCESS_KEY_ID:CHANGEME}
-    access-key-secret: ${OSS_ACCESS_KEY_SECRET:CHANGEME}
+    access-key-id: ${OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
     bucket-name: mall-quuj
