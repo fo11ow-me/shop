@@ -82,11 +82,28 @@ public class ProductController {
         if (Files.exists(localPath)) {
             bytes = Files.readAllBytes(localPath);
         } else {
-            try { bytes = ossService.download(fileName); }
-            catch (Exception e) { bytes = new byte[0]; }
+            try {
+                bytes = ossService.download(fileName);
+                try {
+                    Files.createDirectories(localPath.getParent());
+                    Files.write(localPath, bytes);
+                } catch (Exception ignored) {
+                    // 缓存写入失败不影响图片返回
+                }
+            }
+            catch (Exception e) {
+                Path defaultPath = Paths.get(uploadPath, "product/default.png");
+                if (Files.exists(defaultPath)) {
+                    bytes = Files.readAllBytes(defaultPath);
+                    contentType = "image/png";
+                } else {
+                    bytes = new byte[0];
+                }
+            }
         }
         response.setContentType(contentType);
         response.setHeader("Cache-Control", "public, max-age=86400");
         response.getOutputStream().write(bytes);
     }
+
 }
