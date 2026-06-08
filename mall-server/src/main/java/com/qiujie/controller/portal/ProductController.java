@@ -102,7 +102,7 @@ public class ProductController {
             }
         }
         response.setContentType(contentType);
-        response.setHeader("Cache-Control", "public, max-age=86400");
+        response.setHeader("Cache-Control", "no-cache");
         response.getOutputStream().write(bytes);
     }
 
