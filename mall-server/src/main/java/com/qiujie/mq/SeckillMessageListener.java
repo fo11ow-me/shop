@@ -17,9 +17,13 @@ import com.qiujie.mapper.ProductMapper;
 import com.qiujie.util.RedisUtil;
 import com.rabbitmq.client.Channel;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.context.annotation.Profile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
@@ -38,6 +42,7 @@ import java.util.Map;
 @Profile("!test")
 public class SeckillMessageListener {
 
+    private static final Logger log = LoggerFactory.getLogger(SeckillMessageListener.class);
     private static final String SECKILL_RESULT_KEY = "seckill:result:";
     private static final String SECKILL_ORDER_KEY = "seckill:order:";
     private static final String SECKILL_STOCK_KEY = "seckill:stock:";
@@ -47,16 +52,21 @@ public class SeckillMessageListener {
     private final ProductMapper productMapper;
     private final ProductImgMapper productImgMapper;
     private final RedisUtil redisUtil;
+    private final RabbitTemplate rabbitTemplate;
 
     public SeckillMessageListener(OrderMapper orderMapper, OrderItemMapper orderItemMapper,
                                    ProductMapper productMapper, ProductImgMapper productImgMapper,
-                                   RedisUtil redisUtil) {
+                                   RedisUtil redisUtil, RabbitTemplate rabbitTemplate) {
         this.orderMapper = orderMapper;
         this.orderItemMapper = orderItemMapper;
         this.productMapper = productMapper;
         this.productImgMapper = productImgMapper;
         this.redisUtil = redisUtil;
+        this.rabbitTemplate = rabbitTemplate;
     }
+
+    private static final int MAX_RETRIES = 3;
+    private static final String RETRY_HEADER = "x-retry-count";
 
     /**
      * 消费秒杀订单消息，创建订单并扣减库存
@@ -64,14 +74,47 @@ public class SeckillMessageListener {
     @Transactional
     @RabbitListener(queues = RabbitMQConfig.SECKILL_QUEUE)
     public void handleSeckillOrder(SeckillMessage message, Channel channel,
-                                    @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) {
+                                    @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag,
+                                    @Header(value = RETRY_HEADER, required = false) Integer retryCount) {
         try {
             createSeckillOrder(message);
             writeSuccessResult(message);
             channel.basicAck(deliveryTag, false);
         } catch (Exception e) {
-            handleFailure(message, channel, deliveryTag);
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            int currentRetry = retryCount != null ? retryCount : 0;
+            if (currentRetry < MAX_RETRIES) {
+                retryWithDelay(message, currentRetry + 1);
+                try {
+                    channel.basicAck(deliveryTag, false);
+                } catch (IOException ignored) {
+                }
+            } else {
+                log.error("Seckill order failed after {} retries: sessionId={} userId={}",
+                        MAX_RETRIES, message.getSessionId(), message.getUserId(), e);
+                rollbackStock(message);
+                writeFailureResult(message);
+                try {
+                    channel.basicReject(deliveryTag, false);
+                } catch (IOException ignored) {
+                }
+            }
         }
+    }
+
+    private void rollbackStock(SeckillMessage message) {
+        String stockKey = SECKILL_STOCK_KEY + message.getSessionId();
+        redisUtil.increment(stockKey, 1L);
+        String orderKey = SECKILL_ORDER_KEY + message.getSessionId() + ":" + message.getUserId();
+        redisUtil.del(orderKey);
+    }
+
+    private void writeFailureResult(SeckillMessage message) {
+        String resultKey = SECKILL_RESULT_KEY + message.getSessionId() + ":" + message.getUserId();
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", -1);
+        result.put("msg", "秒杀失败");
+        redisUtil.set(resultKey, JSONUtil.toJsonStr(result), 120);
     }
 
     private void createSeckillOrder(SeckillMessage message) {
@@ -118,23 +161,15 @@ public class SeckillMessageListener {
         redisUtil.set(resultKey, JSONUtil.toJsonStr(result), 120);
     }
 
-    private void handleFailure(SeckillMessage message, Channel channel, long deliveryTag) {
-        // 回滚 Redis 库存 + 删除下单标记
-        String stockKey = SECKILL_STOCK_KEY + message.getSessionId();
-        redisUtil.increment(stockKey, 1L);
-        String orderKey = SECKILL_ORDER_KEY + message.getSessionId() + ":" + message.getUserId();
-        redisUtil.del(orderKey);
-
-        String resultKey = SECKILL_RESULT_KEY + message.getSessionId() + ":" + message.getUserId();
-        Map<String, Object> result = new HashMap<>();
-        result.put("status", -1);
-        result.put("msg", "秒杀失败");
-        redisUtil.set(resultKey, JSONUtil.toJsonStr(result), 120);
-
-        try {
-            channel.basicNack(deliveryTag, false, false);
-        } catch (IOException ignored) {
-        }
+    private void retryWithDelay(SeckillMessage message, int retryCount) {
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.SECKILL_EXCHANGE,
+                RabbitMQConfig.SECKILL_ROUTING_KEY,
+                message,
+                msg -> {
+                    msg.getMessageProperties().setHeader(RETRY_HEADER, retryCount);
+                    return msg;
+                });
     }
 
     private String generateOrderSn() {

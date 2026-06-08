@@ -1,6 +1,7 @@
 package com.qiujie.mq;
 
 import lombok.Data;
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
@@ -9,7 +10,9 @@ import java.math.BigDecimal;
  * @author qiujie
  */
 @Data
-public class SeckillMessage {
+public class SeckillMessage implements Serializable {
+
+    private static final long serialVersionUID = 1L;
     private Integer sessionId;
     private Integer userId;
     private Integer productId;
