@@ -56,8 +56,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user.getPassword() == null || user.getPassword().isBlank()) {
             throw new ServiceException(BusinessStatusEnum.PARAM_ERROR);
         }
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         save(user);
-        user.setPassword(passwordEncoder.encode("123")).setCode("user_" + user.getId());
+        user.setCode("user_" + user.getId());
         updateById(user);
     }
 
