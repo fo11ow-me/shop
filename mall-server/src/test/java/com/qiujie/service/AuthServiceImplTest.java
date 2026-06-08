@@ -48,7 +48,7 @@ class AuthServiceImplTest {
     @Test
     @DisplayName("register — creates new user with encoded password")
     void shouldRegisterNewUser() {
-        authService.register("new_test_user", "test123", "13800138000");
+        authService.register("new_test_user", "test123", "13800138000", "1234", "test-uuid-001");
 
         var user = userMapper.queryByCode("new_test_user");
         assertNotNull(user);
@@ -61,7 +61,7 @@ class AuthServiceImplTest {
     @DisplayName("register — throws on duplicate username")
     void shouldRejectDuplicateUsername() {
         ServiceException ex = assertThrows(ServiceException.class, () -> {
-            authService.register("admin", "test123", "13800138000");
+            authService.register("admin", "test123", "13800138000", "1234", "test-uuid-001");
         });
         assertEquals(BusinessStatusEnum.USERNAME_EXISTS.getCode(), ex.getCode());
     }
@@ -70,7 +70,7 @@ class AuthServiceImplTest {
     @DisplayName("register — throws on empty username")
     void shouldRejectEmptyUsername() {
         ServiceException ex = assertThrows(ServiceException.class, () -> {
-            authService.register("", "test123", "13800138000");
+            authService.register("", "test123", "13800138000", "1234", "test-uuid-001");
         });
         assertEquals(BusinessStatusEnum.AUTH_EMPTY_CREDENTIALS.getCode(), ex.getCode());
     }
@@ -79,7 +79,7 @@ class AuthServiceImplTest {
     @DisplayName("register — throws on empty password")
     void shouldRejectEmptyPassword() {
         ServiceException ex = assertThrows(ServiceException.class, () -> {
-            authService.register("test_user", "", "13800138000");
+            authService.register("test_user", "", "13800138000", "1234", "test-uuid-001");
         });
         assertEquals(BusinessStatusEnum.AUTH_EMPTY_CREDENTIALS.getCode(), ex.getCode());
     }

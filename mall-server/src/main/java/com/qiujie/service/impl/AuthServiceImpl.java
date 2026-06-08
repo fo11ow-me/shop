@@ -42,10 +42,23 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements Au
     }
 
     @Override
-    public void register(String code, String password, String phone) {
+    public void register(String code, String password, String phone, String verificationCode, String uuid) {
         if (code == null || code.isBlank() || password == null || password.isBlank()) {
             throw new ServiceException(BusinessStatusEnum.AUTH_EMPTY_CREDENTIALS);
         }
+        // 验证码校验（与 login 一致）
+        if (uuid == null || uuid.isBlank()) {
+            throw new ServiceException(BusinessStatusEnum.CAPTCHA_NOT_EXIST);
+        }
+        String codeInRedis = (String) redisUtil.get("validate:code:" + uuid);
+        if (codeInRedis == null) {
+            throw new ServiceException(BusinessStatusEnum.CAPTCHA_NOT_EXIST);
+        }
+        if (!codeInRedis.equals(verificationCode)) {
+            throw new ServiceException(BusinessStatusEnum.CAPTCHA_ERROR);
+        }
+        redisUtil.del("validate:code:" + uuid);
+
         User exist = userMapper.selectOne(new QueryWrapper<User>().eq("code", code));
         if (exist != null) {
             throw new ServiceException(BusinessStatusEnum.USERNAME_EXISTS);

@@ -36,7 +36,8 @@ public class AuthController {
     @Operation(summary = "注册")
     @PostMapping("/register")
     public ResponseDTO<Void> register(@RequestBody Map<String, String> params) {
-        authService.register(params.get("code"), params.get("password"), params.get("phone"));
+        authService.register(params.get("code"), params.get("password"), params.get("phone"),
+                params.get("verificationCode"), params.get("uuid"));
         return Response.ok("注册成功");
     }
 
