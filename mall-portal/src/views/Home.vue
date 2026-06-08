@@ -34,7 +34,8 @@
 
       <div class="grid">
         <ProductCard v-for="p in cat.products?.slice(0, 8)" :key="p.id"
-          :product="p" :image-key="cat.productImages?.[p.id] || ''" @buy="buyNowHandler" />
+          :product="p" :image-key="cat.productImages?.[p.id] || ''"
+          :seckill-info="cat.seckillMap?.[p.id] || null" @buy="buyNowHandler" />
       </div>
     </section>
 

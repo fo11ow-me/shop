@@ -28,12 +28,19 @@
         <h1 class="product-name">{{ product.name }}</h1>
         <p class="product-desc">{{ product.detail || '品质家居，精选好物' }}</p>
 
-        <div class="price-box">
+        <!-- Seckill Countdown -->
+        <div v-if="seckillInfo" class="seckill-bar">
+          <span class="seckill-bar-icon">⚡</span>
+          <span class="seckill-bar-price">秒杀价 <em>&yen;{{ seckillInfo.seckillPrice }}</em></span>
+          <span class="seckill-bar-countdown">剩余 {{ formatCountdown(seckillInfo.countdown) }}</span>
+        </div>
+
+        <div class="price-box" v-if="!seckillInfo">
           <span class="price-label">价格</span>
           <span class="price-value"><em>&yen;</em>{{ product.price }}</span>
         </div>
 
-        <div class="meta">
+        <div class="meta" v-if="!seckillInfo">
           <div class="meta-item">
             <span class="label">库存</span>
             <span class="value" :class="{ low: product.stock < 10 }">{{ product.stock }} 件</span>
@@ -44,7 +51,7 @@
           </div>
         </div>
 
-        <div class="qty-row">
+        <div class="qty-row" v-if="!seckillInfo">
           <span class="label">数量</span>
           <div class="qty-control">
             <button @click="amount > 1 && amount--" :disabled="amount <= 1">−</button>
@@ -54,10 +61,15 @@
         </div>
 
         <div class="btn-row">
-          <button class="btn-cart" @click="handleAddCart">
-            <el-icon :size="18"><ShoppingCart /></el-icon>加入购物车
-          </button>
-          <button class="btn-buy" @click="handleBuyNow">立即购买</button>
+          <template v-if="seckillInfo">
+            <button class="btn-buy seckill-btn" @click="goSeckill">⚡ 立即秒杀</button>
+          </template>
+          <template v-else>
+            <button class="btn-cart" @click="handleAddCart">
+              <el-icon :size="18"><ShoppingCart /></el-icon>加入购物车
+            </button>
+            <button class="btn-buy" @click="handleBuyNow">立即购买</button>
+          </template>
         </div>
       </div>
     </div>
@@ -79,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ShoppingCart } from '@element-plus/icons-vue'
@@ -87,6 +99,7 @@ import tempBanner1 from '@/assets/img/temp/category-banner.jpg'
 import { getImageUrl } from '@/api/product'
 import { useAuthStore } from '@/stores/auth'
 import { getProductDetail, addToCart, buyNow } from '../api'
+import request from '@/utils/request'
 
 const route = useRoute()
 const router = useRouter()
@@ -96,7 +109,19 @@ const related = ref([])
 const amount = ref(1)
 const mainImage = ref('')
 const loading = ref(false)
-;(async () => {
+const seckillInfo = ref(null)
+let seckillTimer = null
+
+const formatCountdown = (sec) => {
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  const s = sec % 60
+  return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+}
+
+const goSeckill = () => router.push('/seckill')
+
+onMounted(async () => {
   loading.value = true
   try {
     const res = await getProductDetail(route.params.id)
@@ -104,12 +129,24 @@ const loading = ref(false)
     images.value = res.data?.images || []
     related.value = res.data?.related || []
     mainImage.value = images.value[0]?.url || ''
+    // Check seckill
+    const sessionsRes = await request.get('/seckill/sessions')
+    const sessions = sessionsRes.data || []
+    const match = sessions.find(s => s.productId === product.value?.id)
+    if (match) {
+      seckillInfo.value = { ...match, countdown: Math.max(0, Math.floor((new Date(match.endTime).getTime() - Date.now()) / 1000)) }
+      seckillTimer = setInterval(() => {
+        if (seckillInfo.value) seckillInfo.value.countdown = Math.max(0, seckillInfo.value.countdown - 1)
+      }, 1000)
+    }
   } catch {
     ElMessage.error('加载商品详情失败')
   } finally {
     loading.value = false
   }
-})()
+})
+
+onUnmounted(() => clearInterval(seckillTimer))
 
 const checkAuth = () => {
   if (!useAuthStore().isLogin) { router.push('/login'); return false }
@@ -205,4 +242,15 @@ const handleBuyNow = () => {
 .related-name { font-size: 14px; color: #333; padding: 10px 10px 4px; margin: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .related-price { color: #A10000; font-size: 16px; font-weight: 600; padding: 0 10px 12px; margin: 0; }
+
+/* Seckill Bar */
+.seckill-bar { display: flex; align-items: center; gap: 16px; padding: 16px 20px;
+  background: linear-gradient(135deg, #fff5f5, #ffe8e8); border-radius: 10px;
+  border: 1px solid #ffcccc; margin-bottom: 20px; }
+.seckill-bar-icon { font-size: 20px; }
+.seckill-bar-price { font-size: 16px; color: #666; }
+.seckill-bar-price em { font-size: 26px; font-weight: 700; color: #C10000; font-style: normal; margin-left: 4px; }
+.seckill-bar-countdown { margin-left: auto; font-size: 15px; font-weight: 600; color: #C10000; }
+.seckill-btn { background: linear-gradient(135deg, #C10000, #E60000) !important;
+  font-size: 18px !important; letter-spacing: 2px; }
 </style>

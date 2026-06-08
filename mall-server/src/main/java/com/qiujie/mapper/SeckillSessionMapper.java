@@ -31,4 +31,8 @@ public interface SeckillSessionMapper extends BaseMapper<SeckillSession> {
      * @return 即将开始的秒杀场次列表
      */
     List<SeckillSession> selectUpcomingSessions(@Param("now") LocalDateTime now);
+
+    /** 根据商品ID列表批量查询进行中的秒杀场次 */
+    List<SeckillSession> selectActiveByProductIds(@Param("productIds") List<Integer> productIds,
+                                                   @Param("now") LocalDateTime now);
 }

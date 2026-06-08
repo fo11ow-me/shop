@@ -6,12 +6,14 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.qiujie.entity.Category;
 import com.qiujie.entity.Product;
 import com.qiujie.entity.ProductImg;
+import com.qiujie.entity.SeckillSession;
 import com.qiujie.enums.BusinessStatusEnum;
 import com.qiujie.enums.ProductStatusEnum;
 import com.qiujie.exception.ServiceException;
 import com.qiujie.mapper.CategoryMapper;
 import com.qiujie.mapper.ProductImgMapper;
 import com.qiujie.mapper.ProductMapper;
+import com.qiujie.mapper.SeckillSessionMapper;
 import com.qiujie.repository.ProductSearchRepository;
 import com.qiujie.service.EsSyncService;
 import com.qiujie.service.ProductService;
@@ -29,6 +31,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -55,6 +58,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     private final StringRedisTemplate stringRedisTemplate;
     private final RedisUtil redisUtil;
     private final EsSyncService esSyncService;
+    private final SeckillSessionMapper seckillSessionMapper;
 
     @Autowired(required = false)
     private ProductSearchRepository productSearchRepository;
@@ -62,7 +66,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     public ProductServiceImpl(ProductMapper productMapper, CategoryMapper categoryMapper,
                               ProductImgMapper productImgMapper, CacheClient cacheClient,
                               StringRedisTemplate stringRedisTemplate, RedisUtil redisUtil,
-                              EsSyncService esSyncService) {
+                              EsSyncService esSyncService,
+                              SeckillSessionMapper seckillSessionMapper) {
         this.productMapper = productMapper;
         this.categoryMapper = categoryMapper;
         this.productImgMapper = productImgMapper;
@@ -70,6 +75,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         this.stringRedisTemplate = stringRedisTemplate;
         this.redisUtil = redisUtil;
         this.esSyncService = esSyncService;
+        this.seckillSessionMapper = seckillSessionMapper;
     }
 
     @Override
@@ -86,6 +92,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             List<Product> products = productMapper.selectByCategoryIdLimit(cat.getId(), 8);
             item.put("products", products);
             item.put("productImages", batchProductImages(products));
+            item.put("seckillMap", batchSeckillInfo(products));
             return item;
         }).collect(java.util.stream.Collectors.toList());
         if (!result.isEmpty()) {
@@ -251,6 +258,25 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
                 esSyncService.deleteFromEs(id);
             }
         }
+    }
+
+    /**
+     * 批量查询商品秒杀信息（进行中场次）
+     */
+    private Map<Integer, Map<String, Object>> batchSeckillInfo(List<Product> products) {
+        if (products == null || products.isEmpty()) return Collections.emptyMap();
+        List<Integer> productIds = products.stream().map(Product::getId).distinct().toList();
+        List<SeckillSession> sessions = seckillSessionMapper.selectActiveByProductIds(productIds, LocalDateTime.now());
+        Map<Integer, Map<String, Object>> result = new HashMap<>();
+        for (SeckillSession s : sessions) {
+            Map<String, Object> info = new HashMap<>();
+            info.put("sessionId", s.getId());
+            info.put("seckillPrice", s.getSeckillPrice());
+            info.put("seckillStock", s.getSeckillStock());
+            info.put("endTime", s.getEndTime().toString());
+            result.put(s.getProductId(), info);
+        }
+        return result;
     }
 
     /**

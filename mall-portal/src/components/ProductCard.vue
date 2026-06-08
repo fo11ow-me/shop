@@ -1,15 +1,20 @@
 <template>
-  <router-link :to="`/product/${product.id}`" class="product-card">
+  <router-link :to="seckillInfo ? `/seckill` : `/product/${product.id}`" class="product-card">
     <div class="card-img">
       <img v-if="imageUrl" :src="imageUrl" :alt="product.name" />
       <span v-else class="card-placeholder">{{ product.name?.charAt(0) }}</span>
+      <span v-if="seckillInfo" class="seckill-badge">秒杀</span>
       <div class="card-actions">
-        <span class="quick-buy" @click.prevent="$emit('buy', product.id)">立即购买</span>
+        <span class="quick-buy" @click.prevent="$emit('buy', product.id)">{{ seckillInfo ? '立即秒杀' : '立即购买' }}</span>
       </div>
     </div>
     <div class="card-body">
       <p class="card-name">{{ product.name }}</p>
-      <p class="card-price"><em>&yen;</em>{{ product.price }}</p>
+      <p class="card-price" v-if="seckillInfo">
+        <em>&yen;</em>{{ seckillInfo.seckillPrice }}
+        <span class="card-original">&yen;{{ product.price }}</span>
+      </p>
+      <p class="card-price" v-else><em>&yen;</em>{{ product.price }}</p>
     </div>
   </router-link>
 </template>
@@ -20,7 +25,8 @@ import { getImageUrl } from '@/api/product'
 
 const props = defineProps({
   product: { type: Object, required: true },
-  imageKey: { type: String, default: '' }
+  imageKey: { type: String, default: '' },
+  seckillInfo: { type: Object, default: null }
 })
 
 const imageUrl = computed(() => props.imageKey ? getImageUrl(props.imageKey) : '')
@@ -44,4 +50,7 @@ const imageUrl = computed(() => props.imageKey ? getImageUrl(props.imageKey) : '
 .card-name { font-size: 14px; color: #333; margin: 0 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-price { margin: 0; font-size: 20px; font-weight: 700; color: #A10000; }
 .card-price em { font-size: 14px; font-style: normal; margin-right: 2px; }
+.card-original { font-size: 13px; color: #bbb; text-decoration: line-through; margin-left: 8px; font-weight: 400; }
+.seckill-badge { position: absolute; top: 8px; left: 8px; background: #C10000; color: #fff;
+  font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; z-index: 2; }
 </style>
