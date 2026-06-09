@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
 CONTAINER="mall-mysql"
-SQL_FILE="../sql/mall.sql"
+SQL_FILE="sql/mall.sql"
 
 if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
   echo "==> 导出数据库 $CONTAINER 到 $SQL_FILE ..."

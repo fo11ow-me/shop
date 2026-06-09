@@ -37,8 +37,14 @@ playwright-report/
 # Project uploads (runtime data)
 file/
 
+# Deploy scripts & configs
+deploy/
+
 # Deploy artifacts
 *.tar.gz
 
 # Dist
 dist/
+
+# JMeter test results
+mall-server/src/test/jmeter/results.jtl

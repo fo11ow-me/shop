@@ -28,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # 1. 启动中间件（首次启动自动创建数据库并导入 sql/mall.sql）
-docker compose -f deploy/docker-compose.yml up -d
+docker compose -f docker-compose.yml up -d
 
 # 2. 启动后端 (端口 8800)
 # 注意: spring.amqp.deserialization.trust.all=true 解决秒杀消息反序列化信任问题
@@ -141,9 +141,9 @@ E2E 测试文件位于 `mall-admin/e2e/` 和 `mall-portal/e2e/`（本地开发�
 - **服务器 `.env`**：位于 `/opt/app/mall/.env`，权限 `chmod 600`
 - **本地 `.env`**：位于项目根目录，不提交
 
-环境变量模板: `deploy/docker-compose.server.env.example`
-
 ## 部署
+
+部署脚本和配置不纳入版本控制，存放于 `deploy/` 目录（已加入 `.gitignore`）。
 
 ### 流程
 
@@ -159,11 +159,11 @@ bash deploy/deploy.sh --skip-tests    # 跳过测试（紧急热修复）
 - 镜像仓库：服务器自建 Registry（`<服务器IP>:5000`）
 - 镜像: `localhost:5000/mall/mall-server:latest` / `mall-nginx:latest`
 - `mall-server/Dockerfile` — 基于 `eclipse-temurin:17-jre-jammy`，通过 `SPRING_PROFILES_ACTIVE` 环境变量控制 profile
-- `deploy/nginx/Dockerfile` — 基于 `nginx:alpine`，将两个前端 dist + `nginx.conf` 打包
+- Nginx 镜像基于 `nginx:alpine`，将两个前端 dist + nginx.conf 打包
 
 ### 服务器部署
 
-部署路径: `/opt/app/mall/`，使用 `deploy/docker-compose.server.yml`（包含 mall-server、mall-nginx、mall-registry 容器，与中间件共享 `my_network` 外部网络）。
+部署路径: `/opt/app/mall/`
 
 ### 回滚
 
@@ -176,7 +176,7 @@ ssh <服务器> bash /opt/app/mall/deploy-server.sh rollback abc1234  # 回滚�
 
 - **MySQL 数据库名**: `mall`（开发环境 `127.0.0.1:3306`, 服务器 `mall-mysql:3306`）
 - **初始化 SQL**: `sql/mall.sql`（表结构 + 种子数据）
-- **关闭服务**: 使用 `bash deploy/docker-down.sh`，自动 `mysqldump` 导出数据库后停止容器。直接 `docker compose down` 会丢弃数据变更
+- **关闭服务**: 使用 `bash docker-down.sh`，自动 `mysqldump` 导出数据库后停止容器。直接 `docker compose down` 会丢弃数据变更
 - MyBatis-Plus 配置: 驼峰映射、逻辑删除 (logic-delete-value=1)、枚举自动映射
 - Druid 连接池: 初始化 5, 最小空闲 5, 最大活跃 30
 
