@@ -37,8 +37,10 @@ playwright-report/
 # Project uploads (runtime data)
 file/
 
-# Deploy scripts & configs
-deploy/
+# Deploy scripts (sensitive, not shared) & env templates
+deploy/deploy.sh
+deploy/deploy-server.sh
+deploy/docker-compose.server.env.example
 
 # Deploy artifacts
 *.tar.gz
