@@ -20,8 +20,8 @@ log/
 .DS_Store
 Thumbs.db
 
-# Claude local settings (contains API keys)
-.claude/settings.local.json
+# Claude local settings
+.claude/
 
 # Test artifacts
 .playwright-mcp/

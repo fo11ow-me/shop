@@ -34,7 +34,6 @@ request.interceptors.response.use(response => {
     return response
   }
   if (res.code !== 200) {
-    ElMessage({ message: res.message || '请求失败', type: 'error', duration: 5000 })
     if (res.code === 400 || res.code === 500 || res.code === 1200) {
       removeAuth()
       router.push('/login')

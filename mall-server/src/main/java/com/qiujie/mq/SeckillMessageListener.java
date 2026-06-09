@@ -95,7 +95,7 @@ public class SeckillMessageListener {
                 rollbackStock(message);
                 writeFailureResult(message);
                 try {
-                    channel.basicReject(deliveryTag, false);
+                    channel.basicAck(deliveryTag, false);
                 } catch (IOException ignored) {
                 }
             }

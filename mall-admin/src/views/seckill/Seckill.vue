@@ -117,7 +117,7 @@ const handleSubmit = async () => {
     }
     dialogVisible.value = false
     fetchData()
-  } catch {}
+  } catch (e) { ElMessage.error(e?.message || '操作失败') }
 }
 
 const handleDelete = async (id) => {

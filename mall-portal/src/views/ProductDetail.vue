@@ -158,9 +158,7 @@ const handleAddCart = async () => {
   try {
     await addToCart({ productId: product.value.id, amount: amount.value })
     ElMessage.success('已加入购物车')
-  } catch {
-    // request interceptor handles the error message
-  }
+  } catch (e) { ElMessage.error(e?.message || '加入购物车失败') }
 }
 
 const handleBuyNow = () => {

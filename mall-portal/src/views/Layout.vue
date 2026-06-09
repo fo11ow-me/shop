@@ -101,6 +101,7 @@ import foot4 from '@/assets/img/footer-support.png'
 import { useAuthStore } from '@/stores/auth'
 import { useUserStore } from '@/stores/user'
 import { getCategories } from '../api'
+import { getCartList } from '@/api/cart'
 
 const route = useRoute()
 const router = useRouter()
@@ -147,6 +148,12 @@ onMounted(async () => {
     const cats = await getCategories()
     rootCategories.value = cats.data || []
   } catch {}
+  if (authStore.isLogin) {
+    try {
+      const cart = await getCartList()
+      cartCount.value = cart?.data?.length || 0
+    } catch {}
+  }
 })
 
 onUnmounted(() => window.removeEventListener('scroll', handleScroll))

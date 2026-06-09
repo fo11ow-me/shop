@@ -214,7 +214,7 @@ function startPolling(sessionId) {
 
 function goPay() {
   showResult.value = false
-  router.push('/order')
+  router.push('/orders')
 }
 
 function showResultMsg(success, msg) { resultSuccess.value = success; resultMsg.value = msg; showResult.value = true }

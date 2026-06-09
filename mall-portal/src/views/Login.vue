@@ -48,6 +48,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, Lock, Check } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 import { useAuthStore } from '@/stores/auth'
 import { login, getVerificationCode } from '../api'
@@ -85,7 +86,7 @@ const handleLogin = async () => {
     const res = await login({ ...form, uuid: verificationUuid })
     authStore.loginSuccess(res.data.token, res.data.user)
     router.push('/')
-  } catch {} finally { loading.value = false }
+  } catch (e) { ElMessage.error(e?.message || '登录失败') } finally { loading.value = false }
 }
 onMounted(refreshCode)
 </script>
