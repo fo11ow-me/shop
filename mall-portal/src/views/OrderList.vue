@@ -21,6 +21,9 @@
           <div class="order-header" @click="toggleExpand(order.id)">
             <div class="header-left">
               <span class="order-status" :class="'status-' + order.status">{{ statusLabel(order.status) }}</span>
+              <span v-if="remainingSeconds(order) > 0" :class="['countdown', { urgent: remainingSeconds(order) <= 60 }]">
+                ⏱ {{ formatCountdown(remainingSeconds(order)) }}
+              </span>
               <span class="order-sn">订单号: {{ order.orderSn || order.id }}</span>
             </div>
             <div class="header-right">
@@ -132,13 +135,54 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
 import Sidebar from '../components/Sidebar.vue'
 import PayDialog from '../components/PayDialog.vue'
 import { getOrderList, cancelOrder, receiptOrder, updateRecipient, deleteOrder } from '../api'
 import { getImageUrl } from '../api'
+
+const ORDER_TIMEOUT_MS = 10 * 60 * 1000
+const now = ref(Date.now())
+const cancelPending = new Set()
+let countdownTimer = null
+
+const remainingSeconds = (order) => {
+  if (order.status !== 0 || !order.createTime) return -1
+  const deadline = new Date(order.createTime).getTime() + ORDER_TIMEOUT_MS
+  return Math.max(0, Math.floor((deadline - now.value) / 1000))
+}
+
+const formatCountdown = (seconds) => {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+onMounted(() => {
+  countdownTimer = setInterval(() => {
+    now.value = Date.now()
+    allOrders.value.forEach(order => {
+      if (order.status !== 0 || cancelPending.has(order.id)) return
+      if (remainingSeconds(order) <= 0) {
+        cancelPending.add(order.id)
+        cancelOrder(order.id).then(() => {
+          ElMessage.warning('订单支付超时，已自动取消')
+          load()
+        }).catch(() => {
+          cancelPending.delete(order.id)
+        })
+      }
+    })
+  }, 1000)
+})
+
+onUnmounted(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+  }
+})
 
 const tabs = [
   { label: '全部', value: null },
@@ -332,4 +376,8 @@ const handleDelete = async (id) => {
   color: #666; cursor: pointer; transition: all .15s; white-space: nowrap; }
 .option-tag:hover, .option-tag.active { border-color: #A10000; color: #A10000; background: #fef5f5; }
 .delivery-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.countdown { font-size: 13px; font-weight: 600; color: #E6A23C; font-variant-numeric: tabular-nums; }
+.countdown.urgent { color: #C10000; animation: blink 1s step-end infinite; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 </style>
