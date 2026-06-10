@@ -48,3 +48,11 @@ dist/
 
 # JMeter test results
 mall-server/src/test/jmeter/results.jtl
+
+# Test reports (generated artifacts)
+docs/test-reports/
+
+# Planning files
+findings.md
+progress.md
+task_plan.md
