@@ -8,6 +8,7 @@ import com.qiujie.enums.GenderEnum;
 import com.qiujie.enums.RoleEnum;
 import com.qiujie.enums.UserStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -23,10 +24,12 @@ public class User {
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
 
+    @NotBlank(message = "用户编码不能为空")
     @ExcelColumn("编码")
     @TableField("code")
     private String code;
 
+    @NotBlank(message = "用户姓名不能为空")
     @ExcelColumn("姓名")
     @TableField("name")
     private String name;

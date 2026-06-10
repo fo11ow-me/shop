@@ -1,3 +1,7 @@
+app:
+  cors:
+    allowed-origins: "*"
+
 spring:
   amqp:
     deserialization:

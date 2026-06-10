@@ -7,7 +7,10 @@ import com.qiujie.entity.Product;
 import com.qiujie.service.OssService;
 import com.qiujie.service.ProductService;
 import com.qiujie.util.RedisUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +23,7 @@ import static com.qiujie.constants.RedisConstants.*;
 
 @RestController("adminProductController")
 @RequestMapping("/admin/product")
+@Tag(name = "管理端-商品管理")
 public class ProductController {
 
     private final ProductService productService;
@@ -35,6 +39,7 @@ public class ProductController {
         this.redisUtil = redisUtil;
     }
 
+    @Operation(summary = "获取商品图片")
     @GetMapping("/img")
     public void image(@RequestParam("key") String key, HttpServletResponse response) throws IOException {
         String fileName = key.contains("/") ? key : "product/" + key;
@@ -76,6 +81,7 @@ public class ProductController {
         response.getOutputStream().write(bytes);
     }
 
+    @Operation(summary = "商品分页列表")
     @GetMapping("/list")
     public ResponseDTO<IPage<Product>> list(@RequestParam(defaultValue = "1") Integer current,
                                              @RequestParam(defaultValue = "10") Integer size,
@@ -83,20 +89,23 @@ public class ProductController {
         return Response.success(productService.listPage(current, size, name, status, categoryId));
     }
 
+    @Operation(summary = "新增商品")
     @PostMapping
-    public ResponseDTO<Void> add(@RequestBody Product product) {
+    public ResponseDTO<Void> add(@Valid @RequestBody Product product) {
         productService.add(product);
         redisUtil.del(CACHE_HOME_KEY);
         return Response.ok("新增成功");
     }
 
+    @Operation(summary = "修改商品")
     @PutMapping
-    public ResponseDTO<Void> edit(@RequestBody Product product) {
+    public ResponseDTO<Void> edit(@Valid @RequestBody Product product) {
         productService.updateById(product);
         redisUtil.del(CACHE_HOME_KEY);
         return Response.ok("修改成功");
     }
 
+    @Operation(summary = "删除商品")
     @DeleteMapping("/{id}")
     public ResponseDTO<Void> delete(@PathVariable Integer id) {
         productService.removeById(id);
@@ -105,6 +114,7 @@ public class ProductController {
         return Response.ok("删除成功");
     }
 
+    @Operation(summary = "更新商品状态")
     @PutMapping("/status/{id}")
     public ResponseDTO<Void> updateStatus(@PathVariable Integer id) {
         productService.toggleStatus(id);

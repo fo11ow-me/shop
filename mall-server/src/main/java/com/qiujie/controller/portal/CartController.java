@@ -6,6 +6,9 @@ import com.qiujie.entity.Cart;
 import com.qiujie.service.CartService;
 import com.qiujie.util.SecurityUtil;
 import com.qiujie.vo.CartVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,6 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/portal/cart")
+@Tag(name = "门户端-购物车")
 public class CartController {
 
     private final CartService cartService;
@@ -21,29 +25,34 @@ public class CartController {
         this.cartService = cartService;
     }
 
+    @Operation(summary = "购物车列表")
     @GetMapping("/list")
     public ResponseDTO<List<CartVO>> list() {
         return Response.success(cartService.list(SecurityUtil.getCurrentUserId()));
     }
 
+    @Operation(summary = "添加到购物车")
     @PostMapping("/add")
-    public ResponseDTO<Void> add(@RequestBody Cart cart) {
+    public ResponseDTO<Void> add(@Valid @RequestBody Cart cart) {
         cartService.add(SecurityUtil.getCurrentUserId(), cart);
         return Response.ok("添加购物车成功");
     }
 
+    @Operation(summary = "更新购物车")
     @PutMapping("/update")
-    public ResponseDTO<Void> update(@RequestBody Cart cart) {
+    public ResponseDTO<Void> update(@Valid @RequestBody Cart cart) {
         cartService.update(SecurityUtil.getCurrentUserId(), cart);
         return Response.ok("更新成功");
     }
 
+    @Operation(summary = "删除购物车项")
     @DeleteMapping("/delete/{id}")
     public ResponseDTO<Void> delete(@PathVariable Integer id) {
         cartService.delete(SecurityUtil.getCurrentUserId(), id);
         return Response.ok("删除成功");
     }
 
+    @Operation(summary = "批量删除购物车")
     @DeleteMapping("/batchDelete")
     public ResponseDTO<Void> batchDelete(@RequestBody Map<String, List<Integer>> params) {
         cartService.batchDelete(SecurityUtil.getCurrentUserId(), params);

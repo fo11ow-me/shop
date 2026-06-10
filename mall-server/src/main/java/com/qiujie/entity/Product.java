@@ -2,6 +2,8 @@ package com.qiujie.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.qiujie.enums.ProductStatusEnum;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -17,15 +19,19 @@ public class Product {
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
 
+    @NotBlank(message = "商品名称不能为空")
     @TableField("name")
     private String name;
 
+    @NotNull(message = "商品价格不能为空")
     @TableField("price")
     private BigDecimal price;
 
+    @NotNull(message = "商品库存不能为空")
     @TableField("stock")
     private Integer stock;
 
+    @NotNull(message = "商品分类不能为空")
     @TableField("category_id")
     private Integer categoryId;
 

@@ -11,6 +11,8 @@ import com.qiujie.enums.BusinessStatusEnum;
 import com.qiujie.service.OssService;
 import com.qiujie.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +24,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/admin/user")
+@Tag(name = "管理端-用户管理")
 public class UserController {
 
     private final UserService userService;
@@ -35,7 +38,7 @@ public class UserController {
     @Operation(summary = "新增")
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseDTO<Void> add(@RequestBody User user) {
+    public ResponseDTO<Void> add(@Valid @RequestBody User user) {
         userService.add(user);
         return Response.success();
     }
@@ -59,7 +62,7 @@ public class UserController {
     @Operation(summary = "编辑更新")
     @PutMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseDTO<Void> edit(@RequestBody User user) {
+    public ResponseDTO<Void> edit(@Valid @RequestBody User user) {
         userService.edit(user);
         return Response.success();
     }
@@ -147,7 +150,7 @@ public class UserController {
 
     @Operation(summary = "更新密码")
     @PutMapping("/reset")
-    public ResponseDTO<Void> reset(@RequestBody User user) {
+    public ResponseDTO<Void> reset(@Valid @RequestBody User user) {
         userService.reset(user);
         return Response.success();
     }

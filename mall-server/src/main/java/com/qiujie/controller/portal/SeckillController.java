@@ -1,5 +1,6 @@
 package com.qiujie.controller.portal;
 
+import com.qiujie.annotation.RateLimit;
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
 import com.qiujie.service.SeckillService;
@@ -60,6 +61,7 @@ public class SeckillController {
      * @param authorization 用户令牌
      * @return 排队成功提示
      */
+    @RateLimit(key = "rate:seckill:execute:", limit = 3, window = 60, message = "秒杀请求过于频繁，请稍后再试")
     @Operation(summary = "执行秒杀")
     @PostMapping("/execute")
     public ResponseDTO<Void> execute(@RequestParam Integer sessionId,

@@ -1,6 +1,7 @@
 package com.qiujie.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -20,7 +21,7 @@ public class Category {
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
 
-
+    @NotBlank(message = "分类名称不能为空")
     private String name;
 
 

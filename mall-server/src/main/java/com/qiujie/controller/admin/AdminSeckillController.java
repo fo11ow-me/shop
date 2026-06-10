@@ -6,6 +6,7 @@ import com.qiujie.entity.SeckillSession;
 import com.qiujie.service.SeckillService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,14 +39,14 @@ public class AdminSeckillController {
 
     @Operation(summary = "创建秒杀场次")
     @PostMapping
-    public ResponseDTO<Void> create(@RequestBody SeckillSession session) {
+    public ResponseDTO<Void> create(@Valid @RequestBody SeckillSession session) {
         seckillService.create(session);
         return Response.ok("创建成功");
     }
 
     @Operation(summary = "更新秒杀场次")
     @PutMapping
-    public ResponseDTO<Void> update(@RequestBody SeckillSession session) {
+    public ResponseDTO<Void> update(@Valid @RequestBody SeckillSession session) {
         seckillService.updateSession(session);
         return Response.ok("更新成功");
     }

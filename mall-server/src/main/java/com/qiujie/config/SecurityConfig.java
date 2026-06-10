@@ -19,14 +19,19 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    @Value("${app.cors.allowed-origins:*}")
+    private String allowedOrigins;
 
     private final AuthenticationEntryPointHandler authenticationEntryPointHandler;
     private final AccessDeniedExceptionHandler accessDeniedExceptionHandler;
@@ -53,7 +58,8 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("*"));
+        List<String> origins = Arrays.asList(allowedOrigins.split(","));
+        corsConfiguration.setAllowedOrigins(origins);
         corsConfiguration.setAllowedHeaders(List.of("*"));
         corsConfiguration.setAllowedMethods(List.of("*"));
         corsConfiguration.addExposedHeader("X-Verification-Uuid");
@@ -73,6 +79,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/portal/seckill/sessions", "/portal/seckill/sessions/upcoming", "/portal/seckill/server-time").permitAll()
                         .requestMatchers("/admin/auth/logout").permitAll()
                         .requestMatchers("/admin/auth/**").permitAll()
+                        .requestMatchers("/admin/swagger-ui/**").permitAll()
+                        .requestMatchers("/admin/v3/api-docs/**").permitAll()
+                        .requestMatchers("/admin/actuator/health/**").permitAll()
                         .requestMatchers("/portal/**").authenticated()
                         .requestMatchers("/admin/**").authenticated()
                         .anyRequest().permitAll()
