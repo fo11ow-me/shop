@@ -1,5 +1,6 @@
 package com.qiujie.mq;
 
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.json.JSONUtil;
 import com.qiujie.config.RabbitMQConfig;
 import com.qiujie.entity.Order;
@@ -139,6 +140,7 @@ public class SeckillMessageListener {
         order.setPayMethod(PayMethodEnum.UNKNOWN);
         order.setStatus(OrderStatusEnum.PENDING_PAY);
         orderMapper.insert(order);
+        sendTimeoutMessage(order.getId());
 
         OrderItem item = new OrderItem();
         item.setOrderId(order.getId());
@@ -162,6 +164,11 @@ public class SeckillMessageListener {
     }
 
     private void retryWithDelay(SeckillMessage message, int retryCount) {
+        try {
+            Thread.sleep((long) Math.pow(2, retryCount) * 1000L);
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.SECKILL_EXCHANGE,
                 RabbitMQConfig.SECKILL_ROUTING_KEY,
@@ -172,8 +179,17 @@ public class SeckillMessageListener {
                 });
     }
 
+    /**
+     * 使用 Hutool 雪花算法（Snowflake）保证分布式环境下的唯一性
+     */
     private String generateOrderSn() {
         return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-                + String.format("%04d", (int) (Math.random() * 10000));
+                + IdUtil.getSnowflake(1, 1).nextIdStr().substring(11);
+    }
+
+    private void sendTimeoutMessage(Integer orderId) {
+        OrderTimeoutMessage msg = new OrderTimeoutMessage();
+        msg.setOrderId(orderId);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.ORDER_DELAY_QUEUE, msg);
     }
 }
