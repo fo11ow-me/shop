@@ -139,7 +139,7 @@ const rules = {
   ]
 }
 
-const shippings = ['顺风快递', '百世汇通', '圆通快递', '中通快递']
+const shippings = ['顺丰快递', '百世汇通', '圆通快递', '中通快递']
 
 const isBuyNow = computed(() => !!route.query.productId)
 const buyNowProductId = computed(() => Number(route.query.productId) || 0)

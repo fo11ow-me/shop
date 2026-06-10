@@ -1,5 +1,6 @@
 package com.qiujie.service.impl;
 
+import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -312,8 +313,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         return item;
     }
 
+    /**
+     * 生成全局唯一订单号
+     * <p>
+     * 使用 Hutool 雪花算法（Snowflake）保证分布式环境下的唯一性，
+     * 前缀为日期时间便于人工识别订单创建时间。
+     * </p>
+     */
     private String generateOrderSn() {
         return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-                + String.format("%04d", (int) (Math.random() * 10000));
+                + IdUtil.getSnowflake(1, 1).nextIdStr().substring(11);
     }
 }

@@ -205,7 +205,7 @@ const saveRecipient = async (id) => {
 const payDialogVisible = ref(false)
 const payingOrderId = ref(null)
 
-const deliveryOptions = ['顺风快递', '百世汇通', '圆通快递', '中通快递']
+const deliveryOptions = ['顺丰快递', '百世汇通', '圆通快递', '中通快递']
 
 const orderDelivery = reactive({})
 

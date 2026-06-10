@@ -131,4 +131,29 @@ class SeckillServiceImplTest {
         assertNotNull(result);
         assertTrue(result.containsKey("status"));
     }
+
+    @Test
+    @DisplayName("execute — throws on stock exhaustion")
+    void shouldThrowOnStockExhaustion() {
+        // 手动将 Redis 库存设置为 0 模拟售罄
+        stringRedisTemplate.opsForValue().set(SECKILL_STOCK_KEY + "1", "0");
+
+        // 使用不同用户避免重复下单拦截
+        ServiceException ex = assertThrows(ServiceException.class,
+                () -> seckillService.execute(1, 3));
+        assertEquals(BusinessStatusEnum.SECKILL_STOCK_EMPTY.getCode(), ex.getCode());
+    }
+
+    @Test
+    @DisplayName("execute — 库存恢复验证（扣减后回滚场景）")
+    void shouldRecoverStockOnFailure() {
+        // 先成功秒杀一次，库存从 50 变为 49
+        seckillService.execute(1, 2);
+
+        // 手动模拟库存回滚（MQ 失败时的行为）
+        stringRedisTemplate.opsForValue().increment(SECKILL_STOCK_KEY + "1");
+
+        // 库存已恢复，其他用户仍可秒杀
+        assertDoesNotThrow(() -> seckillService.execute(1, 3));
+    }
 }
