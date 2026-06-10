@@ -21,9 +21,15 @@ public class RabbitMQConfig {
     public static final String SECKILL_QUEUE = "seckill.order.queue";
     public static final String SECKILL_EXCHANGE = "seckill.order.exchange";
     public static final String SECKILL_ROUTING_KEY = "seckill.order";
-    public static final String SECKILL_DLX_EXCHANGE = "seckill.dlx.exchange";
-    public static final String SECKILL_DLX_QUEUE = "seckill.dlx.queue";
-    public static final String SECKILL_DLX_ROUTING_KEY = "seckill.dlx";
+
+    // 订单超时取消
+    public static final String ORDER_DELAY_QUEUE = "order.delay.queue";
+    public static final String ORDER_TIMEOUT_EXCHANGE = "order.timeout.exchange";
+    public static final String ORDER_TIMEOUT_QUEUE = "order.timeout.queue";
+    public static final String ORDER_TIMEOUT_ROUTING_KEY = "order.timeout";
+    private static final int ORDER_TIMEOUT_MS = 10 * 60 * 1000; // 10 分钟
+
+    // ======================== 秒杀队列 ========================
 
     @Bean
     public DirectExchange seckillExchange() {
@@ -31,21 +37,8 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public DirectExchange seckillDlxExchange() {
-        return new DirectExchange(SECKILL_DLX_EXCHANGE);
-    }
-
-    @Bean
     public Queue seckillQueue() {
-        return QueueBuilder.durable(SECKILL_QUEUE)
-                .deadLetterExchange(SECKILL_DLX_EXCHANGE)
-                .deadLetterRoutingKey(SECKILL_DLX_ROUTING_KEY)
-                .build();
-    }
-
-    @Bean
-    public Queue seckillDlxQueue() {
-        return QueueBuilder.durable(SECKILL_DLX_QUEUE).build();
+        return QueueBuilder.durable(SECKILL_QUEUE).build();
     }
 
     @Bean
@@ -53,8 +46,34 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(seckillQueue()).to(seckillExchange()).with(SECKILL_ROUTING_KEY);
     }
 
+    // ======================== 订单超时取消 ========================
+
     @Bean
-    public Binding seckillDlxBinding() {
-        return BindingBuilder.bind(seckillDlxQueue()).to(seckillDlxExchange()).with(SECKILL_DLX_ROUTING_KEY);
+    public DirectExchange orderTimeoutExchange() {
+        return new DirectExchange(ORDER_TIMEOUT_EXCHANGE);
+    }
+
+    /**
+     * 延时队列 — 消息 TTL 过期后自动路由到死信交换机
+     */
+    @Bean
+    public Queue orderDelayQueue() {
+        return QueueBuilder.durable(ORDER_DELAY_QUEUE)
+                .ttl(ORDER_TIMEOUT_MS)
+                .deadLetterExchange(ORDER_TIMEOUT_EXCHANGE)
+                .deadLetterRoutingKey(ORDER_TIMEOUT_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
+    public Queue orderTimeoutQueue() {
+        return QueueBuilder.durable(ORDER_TIMEOUT_QUEUE).build();
+    }
+
+    @Bean
+    public Binding orderTimeoutBinding() {
+        return BindingBuilder.bind(orderTimeoutQueue())
+                .to(orderTimeoutExchange())
+                .with(ORDER_TIMEOUT_ROUTING_KEY);
     }
 }
