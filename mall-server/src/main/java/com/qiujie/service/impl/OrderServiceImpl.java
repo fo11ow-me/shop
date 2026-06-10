@@ -13,7 +13,11 @@ import com.qiujie.mapper.*;
 import com.qiujie.vo.CartVO;
 import com.qiujie.vo.OrderVO;
 import com.qiujie.service.OrderService;
+import com.qiujie.config.RabbitMQConfig;
+import com.qiujie.mq.OrderTimeoutMessage;
 import com.qiujie.util.RedisUtil;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +39,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final ProductMapper productMapper;
     private final ProductImgMapper productImgMapper;
     private final RedisUtil redisUtil;
+
+    @Autowired(required = false)
+    private RabbitTemplate rabbitTemplate;
 
     public OrderServiceImpl(OrderMapper orderMapper, OrderItemMapper orderItemMapper,
                             CartMapper cartMapper, ProductMapper productMapper,
@@ -100,7 +107,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
         Order order = buildOrder(userId, addressId, payMethod, params);
         save(order);
-
+        sendTimeoutMessage(order.getId());
         for (CartVO cart : selectedCarts) {
             Product product = productMap.get(cart.getProductId());
             if (product == null) {
@@ -137,6 +144,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         Order order = buildOrder(userId, null, PayMethodEnum.UNKNOWN, params);
         order.setTotalAmount(product.getPrice().multiply(new BigDecimal(amount)));
         save(order);
+        sendTimeoutMessage(order.getId());
 
         ProductImg firstImg = productImgMapper.selectFirstByProductId(product.getId());
         String imgUrl = firstImg != null ? firstImg.getUrl() : null;
@@ -323,5 +331,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private String generateOrderSn() {
         return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
                 + IdUtil.getSnowflake(1, 1).nextIdStr().substring(11);
+    }
+
+    /**
+     * 发送订单超时取消延时消息到 TTL 队列
+     */
+    private void sendTimeoutMessage(Integer orderId) {
+        if (rabbitTemplate == null) return;
+        OrderTimeoutMessage msg = new OrderTimeoutMessage();
+        msg.setOrderId(orderId);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.ORDER_DELAY_QUEUE, msg);
     }
 }
