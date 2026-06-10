@@ -5,6 +5,7 @@ import com.qiujie.dto.ResponseDTO;
 import com.qiujie.service.HomeService;
 import com.qiujie.vo.CategorySalesVO;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/admin/home")
+@Tag(name = "管理端-首页")
 public class HomeController {
 
     private final HomeService homeService;

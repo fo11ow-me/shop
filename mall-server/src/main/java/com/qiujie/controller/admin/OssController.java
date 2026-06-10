@@ -5,6 +5,7 @@ import com.qiujie.dto.ResponseDTO;
 import com.qiujie.enums.BusinessStatusEnum;
 import com.qiujie.service.OssService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,6 +14,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/admin/oss")
+@Tag(name = "管理端-文件管理")
 public class OssController {
 
     private final OssService ossService;

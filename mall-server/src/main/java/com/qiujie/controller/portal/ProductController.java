@@ -6,6 +6,8 @@ import com.qiujie.entity.Category;
 import com.qiujie.service.OssService;
 import com.qiujie.service.ProductService;
 import com.qiujie.vo.ProductVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +21,7 @@ import java.util.Map;
 
 @RestController("portalProductController")
 @RequestMapping("/portal/product")
+@Tag(name = "门户端-商品")
 public class ProductController {
 
     private final ProductService productService;
@@ -32,16 +35,19 @@ public class ProductController {
         this.ossService = ossService;
     }
 
+    @Operation(summary = "首页数据")
     @GetMapping("/home")
     public ResponseDTO<List<Map<String, Object>>> home() {
         return Response.success(productService.home());
     }
 
+    @Operation(summary = "分类列表")
     @GetMapping("/categories")
     public ResponseDTO<List<Category>> categories() {
         return Response.success(productService.categories());
     }
 
+    @Operation(summary = "按分类查询商品")
     @GetMapping("/category/{id}")
     public ResponseDTO<Map<String, Object>> getByCategory(@PathVariable Integer id,
                                                            @RequestParam(defaultValue = "1") Integer current,
@@ -49,6 +55,7 @@ public class ProductController {
         return Response.success(productService.getByCategory(id, current, size));
     }
 
+    @Operation(summary = "搜索商品")
     @GetMapping("/search")
     public ResponseDTO<Map<String, Object>> search(@RequestParam String keyword,
                                                     @RequestParam(defaultValue = "1") Integer current,
@@ -60,11 +67,13 @@ public class ProductController {
         return Response.success(result);
     }
 
+    @Operation(summary = "商品详情")
     @GetMapping("/detail/{id}")
     public ResponseDTO<ProductVO> detail(@PathVariable Integer id) {
         return Response.success(productService.detail(id));
     }
 
+    @Operation(summary = "获取商品图片")
     @GetMapping("/img")
     public void image(@RequestParam("key") String key, HttpServletResponse response) throws IOException {
         String fileName = key.contains("/") ? key : "product/" + key;

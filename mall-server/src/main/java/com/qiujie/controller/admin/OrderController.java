@@ -6,12 +6,14 @@ import com.qiujie.dto.ResponseDTO;
 import com.qiujie.service.OrderService;
 import com.qiujie.vo.OrderVO;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController("adminOrderController")
 @RequestMapping("/admin/order")
+@Tag(name = "管理端-订单管理")
 public class OrderController {
 
     private final OrderService orderService;

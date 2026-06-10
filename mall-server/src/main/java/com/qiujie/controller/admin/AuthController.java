@@ -5,6 +5,7 @@ import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
 import com.qiujie.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,6 +16,7 @@ import java.util.Map;
 
 @RestController("adminAuthController")
 @RequestMapping("/admin/auth")
+@Tag(name = "管理端-认证")
 public class AuthController {
 
     private final AuthService authService;

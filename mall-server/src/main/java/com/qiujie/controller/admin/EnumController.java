@@ -5,6 +5,7 @@ import com.qiujie.dto.ResponseDTO;
 import com.qiujie.enums.*;
 import com.qiujie.util.EnumUtil;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,6 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/admin/enum")
+@Tag(name = "管理端-枚举")
 public class EnumController {
 
     @Operation(summary = "获取所有枚举选项（用于前端下拉框）")
