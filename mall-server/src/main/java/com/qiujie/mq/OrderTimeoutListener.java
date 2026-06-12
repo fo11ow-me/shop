@@ -103,8 +103,16 @@ public class OrderTimeoutListener {
                     new QueryWrapper<SeckillSession>()
                             .eq("product_id", productId)
                             .eq("seckill_price", price));
+            // Lua 原子递增库存，不再删 key
+            String lua = """
+                local raw = redis.call('GET', KEYS[1])
+                if raw then
+                    raw = raw:gsub('"', '')
+                    redis.call('SET', KEYS[1], tonumber(raw) + 1)
+                end
+                """;
             for (SeckillSession s : sessions) {
-                redisUtil.del(SECKILL_STOCK_KEY + s.getId());
+                redisUtil.executeLua(lua, Void.class, List.of(SECKILL_STOCK_KEY + s.getId()));
             }
         } catch (Exception e) {
             log.warn("Failed to restore seckill stock for order {}", order.getId(), e);

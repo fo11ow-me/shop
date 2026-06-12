@@ -31,6 +31,9 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -73,6 +76,7 @@ public class SeckillMessageListener {
 
     private static final int MAX_RETRIES = 3;
     private static final String RETRY_HEADER = "x-retry-count";
+    private static final ExecutorService RETRY_EXECUTOR = Executors.newFixedThreadPool(4);
 
     /**
      * 消费秒杀订单消息，创建订单并扣减库存
@@ -87,9 +91,11 @@ public class SeckillMessageListener {
         if (delay > 10_000) {
             log.warn("Seckill message timeout {}ms, sessionId={} userId={}",
                     delay, message.getSessionId(), message.getUserId());
+            String stockKey = SECKILL_STOCK_KEY + message.getSessionId();
+            int stockBefore = toInt(redisUtil.get(stockKey));
             rollbackStock(message);
             reconcileLogService.log(message.getSessionId(), message.getUserId(),
-                    "TIMEOUT", 0, 0);
+                    "TIMEOUT", stockBefore, 0);
             try { channel.basicAck(deliveryTag, false); } catch (IOException ignored) {}
             return;
         }
@@ -121,12 +127,27 @@ public class SeckillMessageListener {
 
     private void rollbackStock(SeckillMessage message) {
         String stockKey = SECKILL_STOCK_KEY + message.getSessionId();
-        Object before = redisUtil.get(stockKey);
-        redisUtil.del(stockKey);
         String orderKey = SECKILL_ORDER_KEY + message.getSessionId() + ":" + message.getUserId();
+        // Lua 原子递增库存，避免删 key 导致窗口期数值不准
+        String lua = """
+            local raw = redis.call('GET', KEYS[1])
+            if not raw then return {-1, 0, 0} end
+            raw = raw:gsub('"', '')
+            local before = tonumber(raw) or 0
+            local after = before + 1
+            redis.call('SET', KEYS[1], after)
+            return {1, before, after}
+            """;
+        @SuppressWarnings("unchecked")
+        List<Long> result = redisUtil.executeLua(lua, List.class, List.of(stockKey));
+        int before = 0, after = 0;
+        if (result != null && result.size() >= 3 && result.get(0) == 1L) {
+            before = result.get(1).intValue();
+            after = result.get(2).intValue();
+        }
         redisUtil.del(orderKey);
         reconcileLogService.log(message.getSessionId(), message.getUserId(),
-                "ROLLBACK", toInt(before), 0);
+                "ROLLBACK", before, after);
     }
 
     private void writeFailureResult(SeckillMessage message) {
@@ -191,19 +212,22 @@ public class SeckillMessageListener {
     }
 
     private void retryWithDelay(SeckillMessage message, int retryCount) {
-        try {
-            Thread.sleep((long) Math.pow(2, retryCount) * 1000L);
-        } catch (InterruptedException ignored) {
-            Thread.currentThread().interrupt();
-        }
-        rabbitTemplate.convertAndSend(
-                RabbitMQConfig.SECKILL_EXCHANGE,
-                RabbitMQConfig.SECKILL_ROUTING_KEY,
-                message,
-                msg -> {
-                    msg.getMessageProperties().setHeader(RETRY_HEADER, retryCount);
-                    return msg;
-                });
+        RETRY_EXECUTOR.submit(() -> {
+            try {
+                Thread.sleep((long) Math.pow(2, retryCount) * 1000L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConfig.SECKILL_EXCHANGE,
+                    RabbitMQConfig.SECKILL_ROUTING_KEY,
+                    message,
+                    msg -> {
+                        msg.getMessageProperties().setHeader(RETRY_HEADER, retryCount);
+                        return msg;
+                    });
+        });
     }
 
     /**
