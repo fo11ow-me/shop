@@ -46,18 +46,21 @@ public class ElasticsearchConfig implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        IndexOperations indexOps = elasticsearchOperations.indexOps(ProductDocument.class);
-        if (!indexOps.exists()) {
-            log.info("ES 索引不存在，开始创建并全量导入...");
-            indexOps.createWithMapping();
-        } else {
-            log.info("ES 索引已存在，执行增量同步...");
-            // 清空后重新导入，保证数据一致
-            indexOps.delete();
-            indexOps.createWithMapping();
+        try {
+            IndexOperations indexOps = elasticsearchOperations.indexOps(ProductDocument.class);
+            if (!indexOps.exists()) {
+                log.info("ES 索引不存在，开始创建并全量导入...");
+                indexOps.createWithMapping();
+            } else {
+                log.info("ES 索引已存在，执行增量同步...");
+                indexOps.delete();
+                indexOps.createWithMapping();
+            }
+            importAllProducts();
+            log.info("ES 索引创建完成");
+        } catch (Exception e) {
+            log.error("ES 索引初始化失败（应用仍可正常启动）: {}", e.getMessage());
         }
-        importAllProducts();
-        log.info("ES 索引创建完成");
     }
 
     private static final int BATCH_SIZE = 500;
