@@ -114,8 +114,7 @@ public class RedisCacheClient implements CacheClient {
             return t;
         }
         RedisData redisData = JSONUtil.toBean(jsonStr, RedisData.class);
-        JSONObject jsonObject = (JSONObject) redisData.getData();
-        T t = JSONUtil.toBean(jsonObject, clazz);
+        T t = toBean(redisData.getData(), clazz);
         if (redisData.getExpireTime().isAfter(LocalDateTime.now())) {
             return t;
         }
@@ -133,6 +132,15 @@ public class RedisCacheClient implements CacheClient {
             });
         }
         return t;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T toBean(Object data, Class<T> clazz) {
+        if (data == null) return null;
+        if (data instanceof JSONObject) {
+            return JSONUtil.toBean((JSONObject) data, clazz);
+        }
+        return (T) JSONUtil.toBean(JSONUtil.toJsonStr(data), clazz);
     }
 
     private boolean tryLock(String key) {
@@ -156,8 +164,7 @@ public class RedisCacheClient implements CacheClient {
             return t;
         }
         RedisData redisData = JSONUtil.toBean(jsonStr, RedisData.class);
-        JSONObject jsonObject = (JSONObject) redisData.getData();
-        T t = JSONUtil.toBean(jsonObject, clazz);
+        T t = toBean(redisData.getData(), clazz);
         if (redisData.getExpireTime().isAfter(LocalDateTime.now())) {
             return t;
         }
