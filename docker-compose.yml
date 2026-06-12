@@ -18,16 +18,17 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis/redis-stack-server:7.2.0-v12
     container_name: mall-redis
-    mem_limit: 256m
+    mem_limit: 512m
     deploy:
       resources:
         limits:
-          memory: 256m
+          memory: 512m
     ports:
       - "6379:6379"
-    command: redis-server --requirepass ${REDIS_PASSWORD:-123456}
+    environment:
+      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:-123456}"
     volumes:
       - mall-redis-data:/data
     restart: unless-stopped
@@ -59,8 +60,8 @@ services:
         limits:
           memory: 512m
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "19200:9200"
+      - "19300:9300"
     environment:
       - "discovery.type=single-node"
       - "ES_JAVA_OPTS=-Xms256m -Xmx256m"

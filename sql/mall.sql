@@ -205,6 +205,21 @@ CREATE TABLE IF NOT EXISTS `sms_seckill_order` (
     KEY `idx_session_id` (`session_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='秒杀订单表';
 
+ALTER TABLE `pms_product` ADD INDEX `idx_update_time` (`update_time`);
+ALTER TABLE `sms_seckill_session` ADD INDEX `idx_start_end` (`start_time`, `end_time`);
+
+CREATE TABLE IF NOT EXISTS `reconcile_log` (
+    `id`           BIGINT          NOT NULL                COMMENT '雪花算法主键',
+    `seckill_id`   INT             NOT NULL                COMMENT '秒杀场次ID',
+    `user_id`      INT             NOT NULL                COMMENT '用户ID',
+    `operation`    VARCHAR(20)     NOT NULL                COMMENT '操作类型：DEDUCT/ROLLBACK',
+    `stock_before` INT             DEFAULT NULL            COMMENT '变更前库存',
+    `stock_after`  INT             DEFAULT NULL            COMMENT '变更后库存',
+    `create_time`  DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_seckill_id` (`seckill_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='秒杀库存对账日志';
+
 -- ===============================================
 -- 7. 种子数据
 -- ===============================================
