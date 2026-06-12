@@ -39,10 +39,9 @@ aliyun:
     access-key-secret: test-access-key-secret
     bucket-name: test-bucket
 
-jwt:
-  admin-secret: ${JWT_ADMIN_SECRET:dGVzdC1hZG1pbi1zZWNyZXQtZm9yLW1hbGwtc2VydmVyLWppd3QtMjU2LWJpdA==}
-  portal-secret: ${JWT_PORTAL_SECRET:dGVzdC1wb3J0YWwtc2VjcmV0LWZvci1tYWxsLXNlcnZlci1qd3QtMjU2LWJpdA==}
-  expiration: 7200000
+sa-token:
+  is-read-cookie: false
+  is-log: false
 
 logging:
   level:

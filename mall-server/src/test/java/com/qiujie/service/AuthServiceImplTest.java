@@ -87,7 +87,7 @@ class AuthServiceImplTest {
     @Test
     @DisplayName("login — returns token on correct credentials")
     void shouldLoginWithCorrectCredentials() {
-        Map<String, Object> result = authService.login("admin", "admin123", "1234", "test-uuid-001", "/admin");
+        Map<String, Object> result = authService.login("admin", "admin123", "1234", "test-uuid-001", "/admin", null);
 
         assertNotNull(result.get("token"));
         assertNotNull(result.get("user"));
@@ -97,7 +97,7 @@ class AuthServiceImplTest {
     @DisplayName("login — throws on wrong captcha")
     void shouldRejectWrongCaptcha() {
         ServiceException ex = assertThrows(ServiceException.class, () -> {
-            authService.login("admin", "admin123", "9999", "test-uuid-001", "/admin");
+            authService.login("admin", "admin123", "9999", "test-uuid-001", "/admin", null);
         });
         assertEquals(BusinessStatusEnum.CAPTCHA_ERROR.getCode(), ex.getCode());
     }
@@ -107,7 +107,7 @@ class AuthServiceImplTest {
     void shouldRejectMissingCaptcha() {
         redisTemplate.delete("validate:code:test-uuid-001");
         ServiceException ex = assertThrows(ServiceException.class, () -> {
-            authService.login("admin", "admin123", "1234", "test-uuid-001", "/admin");
+            authService.login("admin", "admin123", "1234", "test-uuid-001", "/admin", null);
         });
         assertEquals(BusinessStatusEnum.CAPTCHA_NOT_EXIST.getCode(), ex.getCode());
     }
@@ -116,7 +116,7 @@ class AuthServiceImplTest {
     @DisplayName("login — throws on wrong password")
     void shouldRejectWrongPassword() {
         assertThrows(Exception.class, () -> {
-            authService.login("admin", "wrong_password", "1234", "test-uuid-001", "/admin");
+            authService.login("admin", "wrong_password", "1234", "test-uuid-001", "/admin", null);
         });
     }
 }

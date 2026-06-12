@@ -1,15 +1,13 @@
 package com.qiujie.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.qiujie.entity.CustomUserDetails;
-import com.qiujie.util.JwtUtil;
+import cn.dev33.satoken.stp.StpUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,22 +28,14 @@ class ImageLoadingTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private JwtUtil jwtUtil;
-
-    @Autowired
     private ObjectMapper objectMapper;
 
     private String adminToken;
 
     @BeforeEach
     void setUp() {
-        CustomUserDetails admin = new CustomUserDetails();
-        admin.setUserId(1);
-        admin.setUsername("admin");
-        admin.setAuthorities(Collections.singletonList(
-                new SimpleGrantedAuthority("system:user:list")));
-        admin.setEnabled(true);
-        adminToken = jwtUtil.generateToken(admin, "/admin");
+        StpUtil.login(1);
+        adminToken = StpUtil.getTokenValue();
     }
 
     @Test
@@ -83,7 +73,7 @@ class ImageLoadingTest {
     void shouldReturnAvatarWithToken() throws Exception {
         // Admin user (id=1) has avatar='' in seed data, so the endpoint returns 404
         mockMvc.perform(get("/admin/user/avatar/1")
-                        .header("Authorization", "Bearer " + adminToken))
+                        .header("mall-token", adminToken))
                 .andExpect(status().is4xxClientError());
     }
 
