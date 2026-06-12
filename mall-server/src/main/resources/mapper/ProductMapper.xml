@@ -87,6 +87,10 @@
         ORDER BY update_time ASC
     </select>
 
+    <select id="selectAllIds" resultType="java.lang.Integer">
+        SELECT id FROM pms_product WHERE is_deleted = 0
+    </select>
+
     <select id="selectPageByName" resultType="com.qiujie.entity.Product">
         SELECT id, name, price, stock, category_id, detail, status
         FROM pms_product

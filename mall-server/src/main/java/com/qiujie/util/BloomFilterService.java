@@ -1,7 +1,6 @@
 package com.qiujie.util;
 
 import cn.hutool.bloomfilter.BitMapBloomFilter;
-import com.qiujie.entity.Product;
 import com.qiujie.mapper.ProductMapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -33,12 +32,12 @@ public class BloomFilterService {
     @PostConstruct
     void init() {
         try {
-            List<Product> products = productMapper.selectList(null);
-            bloomFilter = new BitMapBloomFilter(EXPECTED_INSERTIONS);
-            for (Product p : products) {
-                bloomFilter.add(p.getId().toString());
+            List<Integer> ids = productMapper.selectAllIds();
+            bloomFilter = new BitMapBloomFilter(Math.max(ids.size(), EXPECTED_INSERTIONS));
+            for (Integer id : ids) {
+                bloomFilter.add(id.toString());
             }
-            log.info("Bloom 过滤器初始化完成: {} 个商品 ID", products.size());
+            log.info("Bloom 过滤器初始化完成: {} 个商品 ID", ids.size());
         } catch (Throwable e) {
             log.warn("Bloom 过滤器初始化失败，缓存穿透保护暂时不可用: {}", e.getMessage());
             bloomFilter = null;

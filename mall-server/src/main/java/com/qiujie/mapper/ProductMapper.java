@@ -39,4 +39,6 @@ public interface ProductMapper extends BaseMapper<Product> {
     IPage<Product> selectPageByName(Page<Product> page, @Param("name") String name, @Param("status") Integer status, @Param("categoryId") Integer categoryId);
 
     List<Product> selectByUpdateTime(@Param("minUpdateTime") LocalDateTime minUpdateTime);
+
+    List<Integer> selectAllIds();
 }
