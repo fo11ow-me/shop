@@ -2,6 +2,7 @@ package com.qiujie.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.qiujie.entity.Category;
+import com.qiujie.document.ProductDocument;
 import com.qiujie.entity.Product;
 import com.qiujie.vo.ProductVO;
 
@@ -18,6 +19,11 @@ public interface ProductService extends IService<Product> {
     Map<String, Object> getByCategory(Integer categoryId, Integer current, Integer size);
 
     Map<String, Object> search(String keyword, Integer current, Integer size);
+
+    /**
+     * 基于当前商品的内容推荐（"看了又看"），用 ES function_score 实现
+     */
+    List<ProductDocument> recommend(Integer productId, Integer size);
 
     ProductVO detail(Integer id);
 

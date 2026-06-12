@@ -8,6 +8,7 @@ import com.qiujie.vo.ProductVO;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ProductMapper extends BaseMapper<Product> {
@@ -18,6 +19,10 @@ public interface ProductMapper extends BaseMapper<Product> {
      */
     @Update("UPDATE pms_product SET stock = stock - #{delta} WHERE id = #{id} AND stock >= #{delta}")
     int decrementStock(@Param("id") Integer id, @Param("delta") int delta);
+
+    /** 订单取消时释放库存 */
+    @Update("UPDATE pms_product SET stock = stock + #{delta} WHERE id = #{id}")
+    int incrementStock(@Param("id") Integer id, @Param("delta") int delta);
 
     List<Product> selectByCategoryId(@Param("categoryId") Integer categoryId);
 
@@ -32,4 +37,6 @@ public interface ProductMapper extends BaseMapper<Product> {
     IPage<Product> selectPageByKeyword(Page<Product> page, @Param("keyword") String keyword);
 
     IPage<Product> selectPageByName(Page<Product> page, @Param("name") String name, @Param("status") Integer status, @Param("categoryId") Integer categoryId);
+
+    List<Product> selectByUpdateTime(@Param("minUpdateTime") LocalDateTime minUpdateTime);
 }

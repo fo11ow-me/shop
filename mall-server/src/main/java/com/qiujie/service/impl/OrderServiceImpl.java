@@ -1,6 +1,7 @@
 package com.qiujie.service.impl;
 
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -15,7 +16,9 @@ import com.qiujie.vo.OrderVO;
 import com.qiujie.service.OrderService;
 import com.qiujie.config.RabbitMQConfig;
 import com.qiujie.mq.OrderTimeoutMessage;
+import com.qiujie.constants.RedisConstants;
 import com.qiujie.util.RedisUtil;
+import com.qiujie.util.SalesRankService;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,19 +43,22 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final ProductMapper productMapper;
     private final ProductImgMapper productImgMapper;
     private final RedisUtil redisUtil;
+    private final SalesRankService salesRankService;
 
     @Autowired(required = false)
     private RabbitTemplate rabbitTemplate;
 
     public OrderServiceImpl(OrderMapper orderMapper, OrderItemMapper orderItemMapper,
                             CartMapper cartMapper, ProductMapper productMapper,
-                            ProductImgMapper productImgMapper, RedisUtil redisUtil) {
+                            ProductImgMapper productImgMapper, RedisUtil redisUtil,
+                            SalesRankService salesRankService) {
         this.orderMapper = orderMapper;
         this.orderItemMapper = orderItemMapper;
         this.cartMapper = cartMapper;
         this.productMapper = productMapper;
         this.productImgMapper = productImgMapper;
         this.redisUtil = redisUtil;
+        this.salesRankService = salesRankService;
     }
 
     @Transactional
@@ -120,6 +127,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             addOrderItem(order, product.getId(), product.getName(), product.getPrice(), cart.getProductImg(), cart.getAmount());
         }
         updateById(order);
+        cacheOrderItems(order.getId());
 
         for (CartVO cart : selectedCarts) {
             cartMapper.deleteById(cart.getId());
@@ -149,6 +157,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         ProductImg firstImg = productImgMapper.selectFirstByProductId(product.getId());
         String imgUrl = firstImg != null ? firstImg.getUrl() : null;
         OrderItem item = addOrderItem(order, product.getId(), product.getName(), product.getPrice(), imgUrl, amount);
+        cacheOrderItems(order.getId());
 
         order.setItems(List.of(item));
         return order;
@@ -169,6 +178,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             order.setPayMethod(PayMethodEnum.values()[payMethod]);
         }
         updateById(order);
+        adjustSalesRank(id, 1);
     }
 
     public List<OrderVO> list(Integer userId) {
@@ -232,6 +242,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
         order.setStatus(OrderStatusEnum.CANCELLED);
         updateById(order);
+        // 释放锁定库存
+        List<OrderItem> items = orderItemMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<OrderItem>()
+                        .eq("order_id", id));
+        for (OrderItem item : items) {
+            productMapper.incrementStock(item.getProductId(), item.getAmount());
+        }
+        adjustSalesRank(id, -1);
     }
 
     public void receipt(Integer userId, Integer id) {
@@ -341,5 +359,50 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         OrderTimeoutMessage msg = new OrderTimeoutMessage();
         msg.setOrderId(orderId);
         rabbitTemplate.convertAndSend(RabbitMQConfig.ORDER_DELAY_QUEUE, msg);
+    }
+
+    /** 缓存订单商品快照到 Redis，避免 adjustSalesRank 查 DB */
+    private void cacheOrderItems(Integer orderId) {
+        List<OrderItem> items = orderItemMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<OrderItem>()
+                        .eq("order_id", orderId));
+        if (items.isEmpty()) return;
+        List<Map<String, Object>> snapshot = new ArrayList<>();
+        for (OrderItem item : items) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("productId", item.getProductId());
+            m.put("amount", item.getAmount());
+            snapshot.add(m);
+        }
+        redisUtil.set(RedisConstants.ORDER_ITEMS_SNAPSHOT_KEY + orderId, JSONUtil.toJsonStr(snapshot), 3600);
+    }
+
+    private void adjustSalesRank(Integer orderId, int delta) {
+        String json = (String) redisUtil.get(RedisConstants.ORDER_ITEMS_SNAPSHOT_KEY + orderId);
+        if (json == null) {
+            // 兜底：缓存未命中时查 DB
+            List<OrderItem> items = orderItemMapper.selectList(
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<OrderItem>()
+                            .eq("order_id", orderId));
+            for (OrderItem item : items) {
+                if (delta > 0) {
+                    salesRankService.recordSale(item.getProductId(), item.getAmount());
+                } else {
+                    salesRankService.recordCancel(item.getProductId(), item.getAmount());
+                }
+            }
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> snapshot = JSONUtil.toBean(json, List.class);
+        for (Map<String, Object> item : snapshot) {
+            int productId = (int) item.get("productId");
+            int amount = (int) item.get("amount");
+            if (delta > 0) {
+                salesRankService.recordSale(productId, amount);
+            } else {
+                salesRankService.recordCancel(productId, amount);
+            }
+        }
     }
 }

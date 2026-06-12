@@ -80,6 +80,13 @@
         ORDER BY create_time DESC
     </select>
 
+    <select id="selectByUpdateTime" resultType="com.qiujie.entity.Product">
+        SELECT id, name, price, stock, category_id, detail, status, create_time
+        FROM pms_product
+        WHERE update_time >= #{minUpdateTime}
+        ORDER BY update_time ASC
+    </select>
+
     <select id="selectPageByName" resultType="com.qiujie.entity.Product">
         SELECT id, name, price, stock, category_id, detail, status
         FROM pms_product

@@ -17,4 +17,5 @@ public class SeckillMessage implements Serializable {
     private Integer userId;
     private Integer productId;
     private BigDecimal seckillPrice;
+    private long createTime = System.currentTimeMillis();
 }

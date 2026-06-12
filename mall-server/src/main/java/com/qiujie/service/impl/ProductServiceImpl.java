@@ -14,9 +14,10 @@ import com.qiujie.mapper.CategoryMapper;
 import com.qiujie.mapper.ProductImgMapper;
 import com.qiujie.mapper.ProductMapper;
 import com.qiujie.mapper.SeckillSessionMapper;
+import com.qiujie.document.ProductDocument;
 import com.qiujie.repository.ProductSearchRepository;
-import com.qiujie.service.EsSyncService;
 import com.qiujie.service.ProductService;
+import com.qiujie.util.BloomFilterService;
 import com.qiujie.util.CacheClient;
 import com.qiujie.util.RedisUtil;
 import com.qiujie.vo.ProductVO;
@@ -27,6 +28,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -57,16 +62,20 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     private final CacheClient cacheClient;
     private final StringRedisTemplate stringRedisTemplate;
     private final RedisUtil redisUtil;
-    private final EsSyncService esSyncService;
     private final SeckillSessionMapper seckillSessionMapper;
+
+    @Autowired(required = false)
+    private BloomFilterService bloomFilterService;
 
     @Autowired(required = false)
     private ProductSearchRepository productSearchRepository;
 
+    @Autowired(required = false)
+    private ElasticsearchOperations elasticsearchOperations;
+
     public ProductServiceImpl(ProductMapper productMapper, CategoryMapper categoryMapper,
                               ProductImgMapper productImgMapper, CacheClient cacheClient,
                               StringRedisTemplate stringRedisTemplate, RedisUtil redisUtil,
-                              EsSyncService esSyncService,
                               SeckillSessionMapper seckillSessionMapper) {
         this.productMapper = productMapper;
         this.categoryMapper = categoryMapper;
@@ -74,48 +83,56 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         this.cacheClient = cacheClient;
         this.stringRedisTemplate = stringRedisTemplate;
         this.redisUtil = redisUtil;
-        this.esSyncService = esSyncService;
         this.seckillSessionMapper = seckillSessionMapper;
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public List<Map<String, Object>> home() {
-        String jsonStr = stringRedisTemplate.opsForValue().get(CACHE_HOME_KEY);
-        if (StrUtil.isNotBlank(jsonStr)) {
-            return (List<Map<String, Object>>) (List<?>) JSONUtil.toList(jsonStr, Map.class);
-        }
-        List<Category> parentCategories = categoryMapper.selectByParentId(0);
-        List<Map<String, Object>> result = parentCategories.stream().map(cat -> {
-            Map<String, Object> item = new HashMap<>();
-            item.put("category", cat);
-            List<Product> products = productMapper.selectByCategoryIdLimit(cat.getId(), 8);
-            item.put("products", products);
-            item.put("productImages", batchProductImages(products));
-            item.put("seckillMap", batchSeckillInfo(products));
-            return item;
-        }).collect(java.util.stream.Collectors.toList());
-        if (!result.isEmpty()) {
-            cacheClient.set(CACHE_HOME_KEY, result, CACHE_HOME_TTL, TimeUnit.SECONDS);
-        }
-        return result;
+        List<Map<String, Object>> cached = cacheClient.queryWithLogicalExpire(
+                CACHE_HOME_KEY, List.class,
+                () -> {
+                    List<Category> parentCategories = categoryMapper.selectByParentId(0);
+                    List<Map<String, Object>> result = parentCategories.stream().map(cat -> {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("category", cat);
+                        List<Product> products = productMapper.selectByCategoryIdLimit(cat.getId(), 8);
+                        item.put("products", products);
+                        item.put("productImages", batchProductImages(products));
+                        item.put("seckillMap", batchSeckillInfo(products));
+                        return item;
+                    }).collect(java.util.stream.Collectors.toList());
+                    return result.isEmpty() ? null : result;
+                },
+                CACHE_HOME_TTL, TimeUnit.SECONDS);
+        return cached;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<Category> categories() {
-        String jsonStr = stringRedisTemplate.opsForValue().get(CACHE_CATEGORY_TREE_KEY);
-        if (StrUtil.isNotBlank(jsonStr)) {
-            return JSONUtil.toList(jsonStr, Category.class);
-        }
-        List<Category> parentCategories = categoryMapper.selectByParentId(0);
-        for (Category parent : parentCategories) {
-            List<Category> children = categoryMapper.selectByParentId(parent.getId());
-            parent.setChildren(children);
-        }
-        if (!parentCategories.isEmpty()) {
-            cacheClient.set(CACHE_CATEGORY_TREE_KEY, parentCategories, CACHE_CATEGORY_TTL, TimeUnit.SECONDS);
-        }
-        return parentCategories;
+        List<Category> cached = cacheClient.queryWithLogicalExpire(
+                CACHE_CATEGORY_TREE_KEY, List.class,
+                () -> {
+                    List<Category> all = categoryMapper.selectList(
+                            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Category>()
+                                    .eq("is_deleted", 0));
+                    java.util.Map<Integer, List<Category>> childrenMap = new java.util.HashMap<>();
+                    List<Category> parents = new java.util.ArrayList<>();
+                    for (Category c : all) {
+                        if (c.getParentId() == 0) {
+                            parents.add(c);
+                        } else {
+                            childrenMap.computeIfAbsent(c.getParentId(),
+                                    k -> new java.util.ArrayList<>()).add(c);
+                        }
+                    }
+                    for (Category parent : parents) {
+                        parent.setChildren(childrenMap.getOrDefault(parent.getId(), java.util.List.of()));
+                    }
+                    return parents.isEmpty() ? null : parents;
+                },
+                CACHE_CATEGORY_TTL, TimeUnit.SECONDS);
+        return cached != null ? cached : java.util.List.of();
     }
 
     @Override
@@ -145,19 +162,30 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     }
 
     private Map<String, Object> searchFromEs(String keyword, Integer current, Integer size) {
-        if (productSearchRepository == null) {
+        if (elasticsearchOperations == null) {
             throw new RuntimeException("ES not available");
         }
         int pageNum = current != null ? current - 1 : 0;
         int pageSize = size != null ? size : 10;
-        var pageable = PageRequest.of(pageNum, pageSize, Sort.by(Sort.Order.desc("_score")));
 
-        var esPage = productSearchRepository.findByStatusAndNameOrDetail(
-                ProductStatusEnum.ON_SHELF.getCode(), keyword.trim(), keyword.trim(), pageable);
+        Query esQuery = Query.of(q -> q
+                .bool(b -> b
+                        .filter(f -> f.term(t -> t.field("status")
+                                .value(v -> v.longValue(ProductStatusEnum.ON_SHELF.getCode()))))
+                        .should(s -> s.match(m -> m.field("name").query(keyword.trim())))
+                        .should(s -> s.match(m -> m.field("detail").query(keyword.trim())))
+                        .minimumShouldMatch("1")));
+
+        var nativeQuery = NativeQuery.builder()
+                .withQuery(esQuery)
+                .withPageable(PageRequest.of(pageNum, pageSize, Sort.by(Sort.Order.desc("_score"))))
+                .build();
+
+        SearchHits<ProductDocument> hits = elasticsearchOperations.search(nativeQuery, ProductDocument.class);
 
         Map<String, Object> data = new HashMap<>();
-        data.put("records", esPage.getContent());
-        data.put("total", esPage.getTotalElements());
+        data.put("records", hits.getSearchHits().stream().map(h -> h.getContent()).toList());
+        data.put("total", hits.getTotalHits());
         data.put("current", current != null ? current : 1);
         data.put("size", pageSize);
         return data;
@@ -176,18 +204,55 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     }
 
     @Override
+    public List<ProductDocument> recommend(Integer productId, Integer size) {
+        if (elasticsearchOperations == null) return List.of();
+        try {
+            ProductDocument source = elasticsearchOperations.get(
+                    String.valueOf(productId), ProductDocument.class);
+            if (source == null) return List.of();
+            int limit = size != null ? size : 8;
+
+            // 同分类推荐 + 排除自己
+            var query = Query.of(q -> q.bool(b -> b
+                    .mustNot(mn -> mn.term(t -> t.field("id")
+                            .value(v -> v.longValue(productId))))
+                    .filter(f -> f.term(t -> t.field("status")
+                            .value(v -> v.longValue(ProductStatusEnum.ON_SHELF.getCode()))))
+                    .should(s -> s.match(m -> m.field("name")
+                            .query(source.getName()).boost(3.0f)))
+                    .should(s -> s.term(t -> t.field("categoryId")
+                            .value(v -> v.longValue(source.getCategoryId())).boost(5.0f)))
+                    .minimumShouldMatch("1")));
+
+            var nativeQuery = NativeQuery.builder()
+                    .withQuery(query)
+                    .withMaxResults(limit)
+                    .withSort(org.springframework.data.domain.Sort.by(
+                            org.springframework.data.domain.Sort.Order.desc("_score")))
+                    .build();
+            return elasticsearchOperations.search(nativeQuery, ProductDocument.class)
+                    .getSearchHits().stream().map(h -> h.getContent()).toList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    @Override
     public ProductVO detail(Integer id) {
-        return cacheClient.handleCachePenetration(
+        if (bloomFilterService != null && !bloomFilterService.mightContain(id)) {
+            throw new ServiceException(BusinessStatusEnum.PRODUCT_NOT_EXIST);
+        }
+        ProductVO product = cacheClient.queryWithLogicalExpire(
                 CACHE_PRODUCT_KEY, id, ProductVO.class,
                 productId -> {
-                    ProductVO product = productMapper.selectDetailById(productId);
-                    if (product == null) {
+                    ProductVO p = productMapper.selectDetailById(productId);
+                    if (p == null) {
                         throw new ServiceException(BusinessStatusEnum.PRODUCT_NOT_EXIST);
                     }
-                    return product;
+                    return p;
                 },
-                CACHE_PRODUCT_TTL, TimeUnit.SECONDS
-        );
+                CACHE_PRODUCT_TTL, TimeUnit.SECONDS);
+        return product;
     }
 
     @Override
@@ -222,7 +287,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             productImgMapper.insertBatch(product.getImages());
         }
         redisUtil.del(CACHE_HOME_KEY);
-        esSyncService.syncToEs(product);
+        if (bloomFilterService != null) bloomFilterService.add(product.getId());
     }
 
     @Override
@@ -230,7 +295,6 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         boolean result = super.updateById(product);
         redisUtil.del(CACHE_HOME_KEY);
         redisUtil.del(CACHE_PRODUCT_KEY + product.getId());
-        esSyncService.syncToEs(product);
         return result;
     }
 
@@ -239,7 +303,6 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         boolean result = super.removeById(id);
         redisUtil.del(CACHE_HOME_KEY);
         redisUtil.del(CACHE_PRODUCT_KEY + id);
-        esSyncService.deleteFromEs((Integer) id);
         return result;
     }
 
@@ -252,11 +315,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             super.updateById(product);
             redisUtil.del(CACHE_HOME_KEY);
             redisUtil.del(CACHE_PRODUCT_KEY + id);
-            if (product.getStatus() == ProductStatusEnum.ON_SHELF) {
-                esSyncService.syncToEs(product);
-            } else {
-                esSyncService.deleteFromEs(id);
-            }
+            // ES 索引由 IncSyncProductToEs 定时任务自动同步
         }
     }
 

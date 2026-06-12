@@ -116,42 +116,50 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
             throw new ServiceException(BusinessStatusEnum.SECKILL_SESSION_EXPIRED);
         }
 
-        // 2. Lua 脚本：原子执行「库存初始化 + 防重检查 + 扣库存 + 标记用户」
+        // 2. Lua 脚本：原子执行「库存初始化 + 防重检查 + 扣库存 + 标记用户 + 流水日志」
         String stockKey = SECKILL_STOCK_KEY + sessionId;
         String orderKey = SECKILL_ORDER_KEY + sessionId + ":" + userId;
+        String traceKey = "seckill:trace:" + sessionId;
         String lua = """
             local stockKey = KEYS[1]
             local orderKey = KEYS[2]
+            local traceKey = KEYS[3]
             local initStock = tonumber(ARGV[1])
             local orderTtl = tonumber(ARGV[2])
+            local userId = ARGV[3]
+            local sessionId = ARGV[4]
 
-            -- 库存不存在时初始化
             if redis.call('EXISTS', stockKey) == 0 then
                 redis.call('SET', stockKey, initStock)
             end
 
-            -- 防重：同一用户同一场次只能秒杀一次
             if redis.call('EXISTS', orderKey) == 1 then
-                return -1  -- 重复秒杀
+                return -1
             end
 
-            -- 检查库存
             local raw = redis.call('GET', stockKey) or '0'
             raw = raw:gsub('"', '')
             local stock = tonumber(raw)
             if stock <= 0 then
-                return -2  -- 库存不足
+                return -2
             end
 
-            -- 修正被 JSON 序列化污染的库存值，然后扣减
             redis.call('SET', stockKey, stock - 1)
             redis.call('SET', orderKey, '1', 'EX', orderTtl)
-            return 1  -- 秒杀成功
+
+            -- 流水日志：原子记录扣库存操作
+            local timeArr = redis.call('TIME')
+            local ts = tonumber(timeArr[1]) * 1000 + math.floor(tonumber(timeArr[2]) / 1000)
+            redis.call('HSET', traceKey, userId,
+                string.format('{"userId":%s,"sessionId":%s,"type":"DEDUCT","before":%d,"after":%d,"ts":%d}',
+                    userId, sessionId, stock, stock - 1, ts))
+            redis.call('EXPIRE', traceKey, orderTtl)
+            return 1
             """;
 
         Long result = redisUtil.executeLua(lua, Long.class,
-                List.of(stockKey, orderKey),
-                session.getSeckillStock(), 86400);
+                List.of(stockKey, orderKey, traceKey),
+                session.getSeckillStock(), 86400, String.valueOf(userId), String.valueOf(sessionId));
         if (result == null) {
             throw new ServiceException(BusinessStatusEnum.ERROR);
         }
@@ -179,8 +187,8 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
             rabbitTemplate.convertAndSend(RabbitMQConfig.SECKILL_EXCHANGE,
                     RabbitMQConfig.SECKILL_ROUTING_KEY, message);
         } catch (Exception e) {
-            // RabbitMQ 不可用时回滚 Redis 库存
-            redisUtil.increment(stockKey, 1);
+            // RabbitMQ 不可用时回滚——删除库存 key，下次访问从 DB 重载
+            redisUtil.del(stockKey);
             redisUtil.del(orderKey);
             throw new ServiceException(BusinessStatusEnum.ERROR);
         }

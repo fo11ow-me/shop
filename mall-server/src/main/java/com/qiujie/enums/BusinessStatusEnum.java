@@ -51,6 +51,7 @@ public enum BusinessStatusEnum implements BaseEnum {
     RATE_LIMIT_EXCEEDED(1700, "请求过于频繁，请稍后再试"),
 
     // 秒杀
+    LOCK_FAILED(1799, "操作频繁，请稍后再试"),
     SECKILL_SESSION_NOT_EXIST(1800, "秒杀活动不存在"),
     SECKILL_SESSION_EXPIRED(1801, "秒杀活动已结束"),
     SECKILL_STOCK_EMPTY(1802, "已抢光"),

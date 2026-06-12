@@ -163,5 +163,10 @@ public class RedisConstants {
      */
     public static final Long CACHE_HOME_TTL = 600L;
 
-
+    /** 商品销量排行榜（Redis ZSet） */
+    public static final String PRODUCT_SALES_RANK_KEY = "product:sales:rank";
+    /** 销量排行榜 Top5 读缓存 */
+    public static final String CACHE_SALES_RANK_TOP5 = "cache:sales:rank:top5";
+    /** 订单商品快照缓存，避免 adjustSalesRank 重复查 DB */
+    public static final String ORDER_ITEMS_SNAPSHOT_KEY = "order:items:";
 }

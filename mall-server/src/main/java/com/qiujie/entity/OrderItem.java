@@ -44,6 +44,6 @@ public class OrderItem {
     private LocalDateTime updateTime;
 
     
-    
+    @TableField("is_deleted")
     private Integer deleted;
 }

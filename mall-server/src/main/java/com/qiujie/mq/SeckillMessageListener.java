@@ -3,6 +3,7 @@ package com.qiujie.mq;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.json.JSONUtil;
 import com.qiujie.config.RabbitMQConfig;
+import com.qiujie.constants.RedisConstants;
 import com.qiujie.entity.Order;
 import com.qiujie.entity.OrderItem;
 import com.qiujie.entity.Product;
@@ -15,6 +16,7 @@ import com.qiujie.mapper.OrderItemMapper;
 import com.qiujie.mapper.OrderMapper;
 import com.qiujie.mapper.ProductImgMapper;
 import com.qiujie.mapper.ProductMapper;
+import com.qiujie.service.ReconcileLogService;
 import com.qiujie.util.RedisUtil;
 import com.rabbitmq.client.Channel;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -54,16 +56,19 @@ public class SeckillMessageListener {
     private final ProductImgMapper productImgMapper;
     private final RedisUtil redisUtil;
     private final RabbitTemplate rabbitTemplate;
+    private final ReconcileLogService reconcileLogService;
 
     public SeckillMessageListener(OrderMapper orderMapper, OrderItemMapper orderItemMapper,
                                    ProductMapper productMapper, ProductImgMapper productImgMapper,
-                                   RedisUtil redisUtil, RabbitTemplate rabbitTemplate) {
+                                   RedisUtil redisUtil, RabbitTemplate rabbitTemplate,
+                                   ReconcileLogService reconcileLogService) {
         this.orderMapper = orderMapper;
         this.orderItemMapper = orderItemMapper;
         this.productMapper = productMapper;
         this.productImgMapper = productImgMapper;
         this.redisUtil = redisUtil;
         this.rabbitTemplate = rabbitTemplate;
+        this.reconcileLogService = reconcileLogService;
     }
 
     private static final int MAX_RETRIES = 3;
@@ -77,6 +82,17 @@ public class SeckillMessageListener {
     public void handleSeckillOrder(SeckillMessage message, Channel channel,
                                     @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag,
                                     @Header(value = RETRY_HEADER, required = false) Integer retryCount) {
+        // 消息超时检测：延迟超过 10 秒则丢弃并回滚
+        long delay = System.currentTimeMillis() - message.getCreateTime();
+        if (delay > 10_000) {
+            log.warn("Seckill message timeout {}ms, sessionId={} userId={}",
+                    delay, message.getSessionId(), message.getUserId());
+            rollbackStock(message);
+            reconcileLogService.log(message.getSessionId(), message.getUserId(),
+                    "TIMEOUT", 0, 0);
+            try { channel.basicAck(deliveryTag, false); } catch (IOException ignored) {}
+            return;
+        }
         try {
             createSeckillOrder(message);
             writeSuccessResult(message);
@@ -105,9 +121,12 @@ public class SeckillMessageListener {
 
     private void rollbackStock(SeckillMessage message) {
         String stockKey = SECKILL_STOCK_KEY + message.getSessionId();
-        redisUtil.increment(stockKey, 1L);
+        Object before = redisUtil.get(stockKey);
+        redisUtil.del(stockKey);
         String orderKey = SECKILL_ORDER_KEY + message.getSessionId() + ":" + message.getUserId();
         redisUtil.del(orderKey);
+        reconcileLogService.log(message.getSessionId(), message.getUserId(),
+                "ROLLBACK", toInt(before), 0);
     }
 
     private void writeFailureResult(SeckillMessage message) {
@@ -153,6 +172,14 @@ public class SeckillMessageListener {
             item.setProductImg(firstImg.getUrl());
         }
         orderItemMapper.insert(item);
+        cacheOrderItems(order.getId(), item);
+        reconcileLogService.log(message.getSessionId(), message.getUserId(),
+                "DEDUCT", product.getStock() + 1, product.getStock());
+    }
+
+    private int toInt(Object val) {
+        if (val == null) return 0;
+        try { return Integer.parseInt(val.toString()); } catch (NumberFormatException e) { return 0; }
     }
 
     private void writeSuccessResult(SeckillMessage message) {
@@ -191,5 +218,16 @@ public class SeckillMessageListener {
         OrderTimeoutMessage msg = new OrderTimeoutMessage();
         msg.setOrderId(orderId);
         rabbitTemplate.convertAndSend(RabbitMQConfig.ORDER_DELAY_QUEUE, msg);
+    }
+
+    private void cacheOrderItems(Integer orderId, OrderItem... items) {
+        java.util.List<Map<String, Object>> snapshot = new java.util.ArrayList<>();
+        for (OrderItem item : items) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("productId", item.getProductId());
+            m.put("amount", item.getAmount());
+            snapshot.add(m);
+        }
+        redisUtil.set(RedisConstants.ORDER_ITEMS_SNAPSHOT_KEY + orderId, JSONUtil.toJsonStr(snapshot), 3600);
     }
 }

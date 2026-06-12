@@ -127,6 +127,22 @@ public class RedisUtil {
     }
 
     /**
+     * ZSet 分值累加
+     */
+    public void zIncrBy(String key, String member, double delta) {
+        redisTemplate.opsForZSet().incrementScore(key, member, delta);
+    }
+
+    /**
+     * ZSet 逆序查询（分数从高到低）
+     */
+    @SuppressWarnings("unchecked")
+    public Set<org.springframework.data.redis.core.ZSetOperations.TypedTuple<Object>> zRevRangeWithScores(
+            String key, long start, long end) {
+        return redisTemplate.opsForZSet().reverseRangeWithScores(key, start, end);
+    }
+
+    /**
      * 删除指定的 key
      *
      * @param key 键

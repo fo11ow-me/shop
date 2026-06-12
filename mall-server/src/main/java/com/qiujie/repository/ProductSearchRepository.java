@@ -11,8 +11,4 @@ import org.springframework.data.elasticsearch.repository.ElasticsearchRepository
  * @author qiujie
  */
 public interface ProductSearchRepository extends ElasticsearchRepository<ProductDocument, Integer> {
-
-    Page<ProductDocument> findByStatusAndNameOrDetail(Integer status, String name, String detail, Pageable pageable);
-
-    void deleteByStatus(Integer status);
 }
