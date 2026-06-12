@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  * @author qiujie
  */
 @Data
-@Document(indexName = "mall_product")
+@Document(indexName = "mall_product", createIndex = false)
 public class ProductDocument {
 
     @Id
