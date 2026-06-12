@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  🌐 在线访问 / Online: <a href="http://mall.qiujie.net.cn/">http://mall.qiujie.net.cn/</a>
+  🌐 在线访问 / Online: <a href="http://mall.qiujie.net.cn/">http://mall.qiujie.net.cn/</a> (门户/Portal) ｜ <a href="http://mall.qiujie.net.cn/admin/">http://mall.qiujie.net.cn/admin/</a> (后台/Admin)
 </p>
 
 ---
