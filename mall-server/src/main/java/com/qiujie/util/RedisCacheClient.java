@@ -137,8 +137,12 @@ public class RedisCacheClient implements CacheClient {
     @SuppressWarnings("unchecked")
     private static <T> T toBean(Object data, Class<T> clazz) {
         if (data == null) return null;
-        if (data instanceof JSONObject) {
-            return JSONUtil.toBean((JSONObject) data, clazz);
+        // JSONArray 继承 ArrayList，可直接作为 List 返回
+        if (data instanceof cn.hutool.json.JSONArray) {
+            return (T) data;
+        }
+        if (data instanceof JSONObject jo) {
+            return JSONUtil.toBean(jo, clazz);
         }
         return (T) JSONUtil.toBean(JSONUtil.toJsonStr(data), clazz);
     }
