@@ -1,6 +1,5 @@
 package com.qiujie.util;
 
-import cn.hutool.bloomfilter.BitMapBloomFilter;
 import com.qiujie.mapper.ProductMapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -8,10 +7,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
- * 商品 ID Bloom 过滤器 — 防缓存穿透
+ * 商品 ID 集合 — 防缓存穿透
  *
  * @author qiujie
  */
@@ -20,10 +22,9 @@ import java.util.List;
 public class BloomFilterService {
 
     private static final Logger log = LoggerFactory.getLogger(BloomFilterService.class);
-    private static final int EXPECTED_INSERTIONS = 10000;
 
     private final ProductMapper productMapper;
-    private BitMapBloomFilter bloomFilter;
+    private Set<Integer> productIds = Collections.emptySet();
 
     public BloomFilterService(ProductMapper productMapper) {
         this.productMapper = productMapper;
@@ -33,23 +34,18 @@ public class BloomFilterService {
     void init() {
         try {
             List<Integer> ids = productMapper.selectAllIds();
-            bloomFilter = new BitMapBloomFilter(Math.max(ids.size(), EXPECTED_INSERTIONS));
-            for (Integer id : ids) {
-                bloomFilter.add(id.toString());
-            }
-            log.info("Bloom 过滤器初始化完成: {} 个商品 ID", ids.size());
+            productIds = new HashSet<>(ids);
+            log.info("商品 ID 集合初始化完成: {} 个", ids.size());
         } catch (Throwable e) {
-            log.warn("Bloom 过滤器初始化失败，缓存穿透保护暂时不可用: {}", e.getMessage());
-            bloomFilter = null;
+            log.warn("商品 ID 集合初始化失败，缓存穿透保护暂时不可用: {}", e.getMessage());
         }
     }
 
     public boolean mightContain(Integer id) {
-        if (bloomFilter == null) return true;
-        return bloomFilter.contains(id.toString());
+        return productIds.contains(id);
     }
 
     public void add(Integer id) {
-        if (bloomFilter != null) bloomFilter.add(id.toString());
+        productIds.add(id);
     }
 }
