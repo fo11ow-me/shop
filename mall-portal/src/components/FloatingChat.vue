@@ -1,13 +1,6 @@
 <template>
-  <div class="floating-chat">
-    <!-- 悬浮按钮 -->
-    <button v-if="!isOpen" class="chat-trigger" @click="openChat" title="智能客服">
-      <el-icon :size="24"><Service /></el-icon>
-    </button>
-
-    <!-- 对话面板 -->
-    <transition name="chat-slide">
-      <div v-if="isOpen" class="chat-panel">
+  <transition name="chat-slide">
+    <div v-if="isOpen" class="chat-panel">
         <div class="chat-header">
           <span>💬 智能客服</span>
           <div class="chat-header-actions">
@@ -37,7 +30,6 @@
         </form>
       </div>
     </transition>
-  </div>
 </template>
 
 <script setup>
@@ -123,19 +115,13 @@ const send = async () => {
     await scrollToBottom()
   }
 }
+
+defineExpose({ open: openChat })
 </script>
 
 <style scoped>
-.floating-chat { position: fixed; bottom: 24px; right: 24px; z-index: 9999; font-family: 'Microsoft YaHei', sans-serif; }
-
-/* 悬浮按钮 */
-.chat-trigger { width: 52px; height: 52px; border-radius: 50%; background: #A10000; color: #fff;
-  border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 16px rgba(161,0,0,0.35); transition: all .2s; }
-.chat-trigger:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(161,0,0,0.45); }
-
 /* 对话面板 */
-.chat-panel { position: absolute; bottom: 0; right: 0; width: 360px; height: 480px;
+.chat-panel { position: fixed; bottom: 110px; right: 70px; width: 360px; height: 480px;
   background: #fff; border-radius: 12px; box-shadow: 0 8px 40px rgba(0,0,0,0.12);
   display: flex; flex-direction: column; overflow: hidden; }
 
