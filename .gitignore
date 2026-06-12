@@ -40,6 +40,21 @@ file/
 # Deploy directory (not version controlled)
 deploy/
 
+# Documentation (not version controlled)
+docs/
+
+# Agent instructions
+AGENTS.md
+
+# Codex config
+.codex/
+
+# E2E test configs (local dev only)
+mall-admin/e2e/
+mall-admin/playwright.config.ts
+mall-portal/e2e/
+mall-portal/playwright.config.ts
+
 # Deploy artifacts
 *.tar.gz
 
