@@ -1,5 +1,6 @@
 package com.qiujie.controller.admin;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@SaCheckRole("admin")
 @RestController("adminOrderController")
 @RequestMapping("/admin/order")
 @Tag(name = "管理端-订单管理")

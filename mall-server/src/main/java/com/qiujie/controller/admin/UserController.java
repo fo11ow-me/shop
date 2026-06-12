@@ -3,6 +3,7 @@ package com.qiujie.controller.admin;
 
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.hutool.core.util.StrUtil;
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
@@ -13,7 +14,6 @@ import com.qiujie.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,6 +25,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/admin/user")
 @Tag(name = "管理端-用户管理")
+@SaCheckRole("admin")
 public class UserController {
 
     private final UserService userService;
@@ -37,7 +38,7 @@ public class UserController {
 
     @Operation(summary = "新增")
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @SaCheckRole("admin")
     public ResponseDTO<Void> add(@Valid @RequestBody User user) {
         userService.add(user);
         return Response.success();
@@ -45,7 +46,7 @@ public class UserController {
 
     @Operation(summary = "逻辑删除")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @SaCheckRole("admin")
     public ResponseDTO<Void> delete(@PathVariable Integer id) {
         userService.delete(id);
         return Response.success();
@@ -53,7 +54,7 @@ public class UserController {
 
     @Operation(summary = "批量逻辑删除")
     @DeleteMapping("/batch/{ids}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @SaCheckRole("admin")
     public ResponseDTO<Void> deleteBatch(@PathVariable List<Integer> ids) {
         userService.deleteBatch(ids);
         return Response.success();
@@ -61,7 +62,7 @@ public class UserController {
 
     @Operation(summary = "编辑更新")
     @PutMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @SaCheckRole("admin")
     public ResponseDTO<Void> edit(@Valid @RequestBody User user) {
         userService.edit(user);
         return Response.success();
@@ -87,32 +88,26 @@ public class UserController {
 
     @Operation(summary = "多条件分页查询")
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @SaCheckRole("admin")
     public ResponseDTO<Map<String, Object>> list(@RequestParam(defaultValue = "1") Integer current, @RequestParam(defaultValue = "10") Integer size, String name, String birthday, Integer status, String code, String phone, Integer gender, String startTime, String endTime) {
         return Response.success(userService.list(current, size, name, birthday, status, code, phone, gender, startTime, endTime));
     }
 
     @Operation(summary = "数据导出接口")
     @GetMapping("/export/{filename}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @SaCheckRole("admin")
     public void export(HttpServletResponse response, @PathVariable String filename) throws IOException {
         userService.export(response, filename);
     }
 
     @Operation(summary = "数据导入接口")
     @PostMapping("/import")
-    @PreAuthorize("hasRole('ADMIN')")
+    @SaCheckRole("admin")
     public ResponseDTO<Void> imp(MultipartFile file) throws IOException {
         userService.imp(file);
         return Response.success();
     }
 
-    @Operation(summary = "检查员工的密码")
-    @GetMapping("/{pwd}/{id}")
-    public ResponseDTO<Void> validate(@PathVariable String pwd, @PathVariable Integer id) {
-        userService.validate(pwd, id);
-        return Response.success();
-    }
 
     @Operation(summary = "获取头像")
     @GetMapping("/avatar/{id}")
@@ -148,6 +143,7 @@ public class UserController {
         return Response.success(Map.of("fileName", fileName, "url", url));
     }
 
+    @SaCheckRole("admin")
     @Operation(summary = "更新密码")
     @PutMapping("/reset")
     public ResponseDTO<Void> reset(@Valid @RequestBody User user) {

@@ -1,5 +1,6 @@
 package com.qiujie.controller.admin;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
 import com.qiujie.enums.*;
@@ -17,6 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/admin/enum")
 @Tag(name = "管理端-枚举")
+@SaCheckRole("admin")
 public class EnumController {
 
     @Operation(summary = "获取所有枚举选项（用于前端下拉框）")

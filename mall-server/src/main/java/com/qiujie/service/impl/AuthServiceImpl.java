@@ -1,8 +1,8 @@
 package com.qiujie.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.qiujie.entity.CustomUserDetails;
 import com.qiujie.entity.User;
 import com.qiujie.entity.ValidateCode;
 import com.qiujie.enums.BusinessStatusEnum;
@@ -10,13 +10,10 @@ import com.qiujie.enums.UserStatusEnum;
 import com.qiujie.exception.ServiceException;
 import com.qiujie.mapper.UserMapper;
 import com.qiujie.service.AuthService;
-import com.qiujie.util.JwtUtil;
+import com.qiujie.util.DeviceUtils;
 import com.qiujie.util.RedisUtil;
 import com.qiujie.util.ValidateCodeUtil;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -28,17 +25,11 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements Au
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final RedisUtil redisUtil;
-    private final AuthenticationManager authenticationManager;
-    private final JwtUtil jwtUtil;
 
-    public AuthServiceImpl(UserMapper userMapper, PasswordEncoder passwordEncoder,
-                           RedisUtil redisUtil, AuthenticationManager authenticationManager,
-                           JwtUtil jwtUtil) {
+    public AuthServiceImpl(UserMapper userMapper, PasswordEncoder passwordEncoder, RedisUtil redisUtil) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.redisUtil = redisUtil;
-        this.authenticationManager = authenticationManager;
-        this.jwtUtil = jwtUtil;
     }
 
     @Override
@@ -46,7 +37,6 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements Au
         if (code == null || code.isBlank() || password == null || password.isBlank()) {
             throw new ServiceException(BusinessStatusEnum.AUTH_EMPTY_CREDENTIALS);
         }
-        // 验证码校验（与 login 一致）
         if (uuid == null || uuid.isBlank()) {
             throw new ServiceException(BusinessStatusEnum.CAPTCHA_NOT_EXIST);
         }
@@ -73,7 +63,7 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements Au
     }
 
     @Override
-    public Map<String, Object> login(String code, String password, String verificationCode, String uuid, String pathPrefix) {
+    public Map<String, Object> login(String code, String password, String verificationCode, String uuid, String pathPrefix, HttpServletRequest request) {
         if (uuid == null || uuid.isBlank()) {
             throw new ServiceException(BusinessStatusEnum.CAPTCHA_NOT_EXIST);
         }
@@ -85,6 +75,7 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements Au
             throw new ServiceException(BusinessStatusEnum.CAPTCHA_ERROR);
         }
         redisUtil.del("validate:code:" + uuid);
+
         User existUser = userMapper.selectOne(new QueryWrapper<User>().eq("code", code));
         if (existUser == null) {
             throw new ServiceException(BusinessStatusEnum.USER_NOT_EXIST);
@@ -92,18 +83,17 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements Au
         if (existUser.getStatus() == UserStatusEnum.DISABLED) {
             throw new ServiceException(BusinessStatusEnum.ACCOUNT_DISABLED);
         }
-        UsernamePasswordAuthenticationToken authToken =
-                new UsernamePasswordAuthenticationToken(code, password);
-        Authentication authenticate;
-        try {
-            authenticate = authenticationManager.authenticate(authToken);
-        } catch (AuthenticationException e) {
+        if (!passwordEncoder.matches(password, existUser.getPassword())) {
             throw new ServiceException(BusinessStatusEnum.PASSWORD_ERROR);
         }
-        CustomUserDetails staffDetails = (CustomUserDetails) authenticate.getPrincipal();
-        String token = jwtUtil.generateToken(staffDetails, pathPrefix);
-        User user = this.userMapper.queryByCode(staffDetails.getUsername());
-        return Map.of("user", user, "token", token);
+
+        String role = pathPrefix.startsWith("/admin") ? "admin" : "portal";
+        String device = DeviceUtils.getRequestDevice(request);
+        StpUtil.login(existUser.getId(), role + ":" + device);
+        StpUtil.getSession().set("device", device);
+        StpUtil.getSession().set("user", existUser);
+
+        return Map.of("user", existUser, "token", StpUtil.getTokenValue());
     }
 
     @Override
@@ -116,12 +106,6 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User> implements Au
 
     @Override
     public void logout(String token, String requestUri) {
-        String jti = jwtUtil.extractJti(token, requestUri);
-        if (jti != null) {
-            long remaining = jwtUtil.extractRemainingSeconds(token, requestUri);
-            if (remaining > 0) {
-                redisUtil.set("token:blacklist:" + jti, "1", remaining);
-            }
-        }
+        StpUtil.logout();
     }
 }

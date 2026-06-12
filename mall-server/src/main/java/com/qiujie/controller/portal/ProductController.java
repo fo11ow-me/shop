@@ -1,5 +1,6 @@
 package com.qiujie.controller.portal;
 
+import com.qiujie.document.ProductDocument;
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
 import com.qiujie.entity.Category;
@@ -10,6 +11,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -73,6 +76,13 @@ public class ProductController {
         return Response.success(productService.detail(id));
     }
 
+    @Operation(summary = "商品推荐（看了又看）")
+    @GetMapping("/recommend/{id}")
+    public ResponseDTO<List<ProductDocument>> recommend(@PathVariable Integer id,
+                                                         @RequestParam(defaultValue = "8") Integer size) {
+        return Response.success(productService.recommend(id, size));
+    }
+
     @Operation(summary = "获取商品图片")
     @GetMapping("/img")
     public void image(@RequestParam("key") String key, HttpServletResponse response) throws IOException {
@@ -87,7 +97,11 @@ public class ProductController {
             default -> "image/jpeg";
         };
         byte[] bytes;
-        Path localPath = Paths.get(uploadPath, fileName);
+        Path localPath = Paths.get(uploadPath, fileName).normalize();
+        if (!localPath.startsWith(Paths.get(uploadPath).normalize())) {
+            response.setStatus(404);
+            return;
+        }
         if (Files.exists(localPath)) {
             bytes = Files.readAllBytes(localPath);
         } else {

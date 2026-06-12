@@ -1,5 +1,6 @@
 package com.qiujie.controller.admin;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
 import com.qiujie.entity.SeckillSession;
@@ -12,11 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/**
- * 秒杀管理控制器（后台）
- *
- * @author qiujie
- */
+@SaCheckRole("admin")
 @Tag(name = "秒杀管理")
 @Profile("!test")
 @RestController

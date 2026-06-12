@@ -1,5 +1,6 @@
 package com.qiujie.controller.admin;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
 import com.qiujie.enums.BusinessStatusEnum;
@@ -12,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Map;
 
+@SaCheckRole("admin")
 @RestController
 @RequestMapping("/admin/oss")
 @Tag(name = "管理端-文件管理")

@@ -1,5 +1,6 @@
 package com.qiujie.controller.admin;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
@@ -21,6 +22,7 @@ import java.nio.file.Paths;
 
 import static com.qiujie.constants.RedisConstants.*;
 
+@SaCheckRole("admin")
 @RestController("adminProductController")
 @RequestMapping("/admin/product")
 @Tag(name = "管理端-商品管理")
@@ -53,7 +55,11 @@ public class ProductController {
             default -> "image/jpeg";
         };
         byte[] bytes;
-        Path localPath = Paths.get(uploadPath, fileName);
+        Path localPath = Paths.get(uploadPath, fileName).normalize();
+        if (!localPath.startsWith(Paths.get(uploadPath).normalize())) {
+            response.setStatus(404);
+            return;
+        }
         if (Files.exists(localPath)) {
             bytes = Files.readAllBytes(localPath);
         } else {

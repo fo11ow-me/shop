@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -36,10 +37,11 @@ public class AuthController {
     @RateLimit(key = "rate:login:admin:", limit = 5, window = 60)
     @Operation(summary = "登录")
     @PostMapping("/login")
-    public ResponseDTO<Map<String, Object>> login(@RequestBody Map<String, String> params) {
+    public ResponseDTO<Map<String, Object>> login(@RequestBody Map<String, String> params,
+                                                  HttpServletRequest request) {
         return Response.success(authService.login(
             params.get("code"), params.get("password"),
-            params.get("verificationCode"), params.get("uuid"), "/admin"));
+            params.get("verificationCode"), params.get("uuid"), "/admin", request));
     }
 
     @RateLimit(key = "rate:captcha:admin:", limit = 10, window = 60)

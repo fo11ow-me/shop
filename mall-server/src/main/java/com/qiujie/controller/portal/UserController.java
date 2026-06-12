@@ -7,7 +7,7 @@ import com.qiujie.enums.BusinessStatusEnum;
 import com.qiujie.entity.User;
 import com.qiujie.service.OssService;
 import com.qiujie.service.UserService;
-import com.qiujie.util.SecurityUtil;
+import cn.dev33.satoken.stp.StpUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
@@ -33,13 +33,13 @@ public class UserController {
     @Operation(summary = "获取用户信息")
     @GetMapping("/info")
     public ResponseDTO<User> info() {
-        return Response.success(userService.queryInfo(SecurityUtil.getCurrentUserId()));
+        return Response.success(userService.queryInfo(StpUtil.getLoginIdAsInt()));
     }
 
     @Operation(summary = "获取用户头像")
     @GetMapping("/avatar")
     public void avatar(HttpServletResponse response) throws IOException {
-        User user = userService.getById(SecurityUtil.getCurrentUserId());
+        User user = userService.getById(StpUtil.getLoginIdAsInt());
         if (user == null || StrUtil.isBlank(user.getAvatar())) {
             response.setStatus(404);
             return;
@@ -63,7 +63,7 @@ public class UserController {
     @Operation(summary = "更新用户信息")
     @PutMapping("/update")
     public ResponseDTO<User> update(@RequestBody Map<String, String> params) {
-        return Response.success(userService.updateInfo(SecurityUtil.getCurrentUserId(), params));
+        return Response.success(userService.updateInfo(StpUtil.getLoginIdAsInt(), params));
     }
 
     @Operation(summary = "更新头像")
@@ -72,6 +72,6 @@ public class UserController {
         if (file.isEmpty()) {
             return Response.error(BusinessStatusEnum.FILE_EMPTY);
         }
-        return Response.success(userService.updateAvatar(SecurityUtil.getCurrentUserId(), file));
+        return Response.success(userService.updateAvatar(StpUtil.getLoginIdAsInt(), file));
     }
 }

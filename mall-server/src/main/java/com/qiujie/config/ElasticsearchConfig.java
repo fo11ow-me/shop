@@ -60,28 +60,28 @@ public class ElasticsearchConfig implements ApplicationRunner {
         log.info("ES 索引创建完成");
     }
 
+    private static final int BATCH_SIZE = 500;
+
     private void importAllProducts() {
         List<Product> products = productMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Product>()
                         .eq("is_deleted", 0));
         log.info("ES 全量导入：查询到 {} 个商品", products.size());
-        int count = 0;
-        int skipped = 0;
-        for (Product p : products) {
-            if (p.getStatus() != ProductStatusEnum.ON_SHELF) {
-                skipped++;
-                log.debug("跳过商品 id={}, status={}", p.getId(), p.getStatus());
-                continue;
-            }
+
+        List<ProductDocument> docs = products.stream()
+                .filter(p -> p.getStatus() == ProductStatusEnum.ON_SHELF)
+                .map(this::toDocument)
+                .collect(java.util.stream.Collectors.toList());
+
+        for (int i = 0; i < docs.size(); i += BATCH_SIZE) {
+            int end = Math.min(i + BATCH_SIZE, docs.size());
             try {
-                ProductDocument doc = toDocument(p);
-                productSearchRepository.save(doc);
-                count++;
+                productSearchRepository.saveAll(docs.subList(i, end));
             } catch (Exception e) {
-                log.error("ES 导入商品 id={} 失败: {}", p.getId(), e.getMessage());
+                log.error("ES 批量导入失败 [{}, {}): {}", i, end, e.getMessage());
             }
         }
-        log.info("ES 导入完成：成功 {} 个, 跳过 {} 个 (非上架)", count, skipped);
+        log.info("ES 导入完成：成功 {} 个, 跳过 {} 个 (非上架)", docs.size(), products.size() - docs.size());
     }
 
     private ProductDocument toDocument(Product p) {

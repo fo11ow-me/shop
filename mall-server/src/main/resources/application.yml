@@ -79,10 +79,20 @@ mybatis-plus:
       logic-delete-value: 1
       logic-not-delete-value: 0
 
-jwt:
-  admin-secret: ${jwt.admin-secret}
-  portal-secret: ${jwt.portal-secret}
-  expiration: 7200000
+sa-token:
+  token-name: mall-token
+  timeout: 7200
+  active-timeout: -1
+  is-concurrent: false
+  is-share: true
+  is-log: false
+  token-style: uuid
+  alone-redis:
+    database: 1
+    host: ${spring.data.redis.host}
+    port: ${spring.data.redis.port}
+    password: ${spring.data.redis.password}
+    timeout: 3000ms
 
 springdoc:
   swagger-ui:
@@ -94,3 +104,8 @@ aliyun:
     access-key-id: ${aliyun.oss.access-key-id}
     access-key-secret: ${aliyun.oss.access-key-secret}
     bucket-name: ${aliyun.oss.bucket-name}
+
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:your-api-key}
+  base-url: https://api.deepseek.com
+  model: deepseek-chat

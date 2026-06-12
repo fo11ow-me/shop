@@ -6,7 +6,7 @@ import com.qiujie.entity.Order;
 import com.qiujie.enums.BusinessStatusEnum;
 import com.qiujie.exception.ServiceException;
 import com.qiujie.service.OrderService;
-import com.qiujie.util.SecurityUtil;
+import cn.dev33.satoken.stp.StpUtil;
 import com.qiujie.vo.OrderVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,27 +29,27 @@ public class OrderController {
     @Operation(summary = "从购物车创建订单")
     @PostMapping("/create")
     public ResponseDTO<Order> create(@RequestBody Map<String, Object> params) {
-        return Response.success(orderService.createFromCart(SecurityUtil.getCurrentUserId(), params));
+        return Response.success(orderService.createFromCart(StpUtil.getLoginIdAsInt(), params));
     }
 
     @Operation(summary = "立即购买")
     @PostMapping("/buyNow")
     public ResponseDTO<Order> buyNow(@RequestBody Map<String, Object> params) {
-        return Response.success(orderService.buyNow(SecurityUtil.getCurrentUserId(), params));
+        return Response.success(orderService.buyNow(StpUtil.getLoginIdAsInt(), params));
     }
 
     @Operation(summary = "支付订单")
     @PutMapping("/pay/{id}")
     public ResponseDTO<Void> pay(@PathVariable Integer id, @RequestBody(required = false) Map<String, Object> params) {
         Integer payMethod = params != null ? (Integer) params.getOrDefault("payMethod", 0) : 0;
-        orderService.pay(SecurityUtil.getCurrentUserId(), id, payMethod);
+        orderService.pay(StpUtil.getLoginIdAsInt(), id, payMethod);
         return Response.ok("支付成功");
     }
 
     @Operation(summary = "订单列表")
     @GetMapping("/list")
     public ResponseDTO<List<OrderVO>> list(@RequestParam(required = false) Integer status) {
-        Integer userId = SecurityUtil.getCurrentUserId();
+        Integer userId = StpUtil.getLoginIdAsInt();
         if (status != null) {
             return Response.success(orderService.listByStatus(userId, status));
         }
@@ -59,13 +59,13 @@ public class OrderController {
     @Operation(summary = "订单详情")
     @GetMapping("/detail/{id}")
     public ResponseDTO<OrderVO> detail(@PathVariable Integer id) {
-        return Response.success(orderService.detail(SecurityUtil.getCurrentUserId(), id));
+        return Response.success(orderService.detail(StpUtil.getLoginIdAsInt(), id));
     }
 
     @Operation(summary = "取消订单")
     @PutMapping("/cancel/{id}")
     public ResponseDTO<Void> cancel(@PathVariable Integer id) {
-        OrderVO order = orderService.detail(SecurityUtil.getCurrentUserId(), id);
+        OrderVO order = orderService.detail(StpUtil.getLoginIdAsInt(), id);
         if (order == null) {
             throw new ServiceException(BusinessStatusEnum.ORDER_NOT_EXIST);
         }
@@ -76,7 +76,7 @@ public class OrderController {
     @Operation(summary = "确认收货")
     @PutMapping("/receipt/{id}")
     public ResponseDTO<Void> receipt(@PathVariable Integer id) {
-        orderService.receipt(SecurityUtil.getCurrentUserId(), id);
+        orderService.receipt(StpUtil.getLoginIdAsInt(), id);
         return Response.ok("确认收货成功");
     }
 
@@ -84,7 +84,7 @@ public class OrderController {
     @PutMapping("/recipient/{id}")
     public ResponseDTO<Void> updateRecipient(@PathVariable Integer id, @RequestBody Map<String, String> params) {
         Integer expressDelivery = params.containsKey("expressDelivery") ? Integer.valueOf(params.get("expressDelivery")) : null;
-        orderService.updateRecipient(SecurityUtil.getCurrentUserId(), id,
+        orderService.updateRecipient(StpUtil.getLoginIdAsInt(), id,
                 params.get("recipientName"), params.get("recipientPhone"), params.get("recipientAddress"), expressDelivery);
         return Response.ok("更新成功");
     }
@@ -92,7 +92,7 @@ public class OrderController {
     @Operation(summary = "删除订单")
     @DeleteMapping("/delete/{id}")
     public ResponseDTO<Void> delete(@PathVariable Integer id) {
-        orderService.delete(SecurityUtil.getCurrentUserId(), id);
+        orderService.delete(StpUtil.getLoginIdAsInt(), id);
         return Response.ok("删除成功");
     }
 }

@@ -1,8 +1,10 @@
 package com.qiujie.controller.admin;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
 import com.qiujie.service.HomeService;
+import com.qiujie.util.SalesRankService;
 import com.qiujie.vo.CategorySalesVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -11,15 +13,24 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@SaCheckRole("admin")
 @RestController
 @RequestMapping("/admin/home")
 @Tag(name = "管理端-首页")
 public class HomeController {
 
     private final HomeService homeService;
+    private final SalesRankService salesRankService;
 
-    public HomeController(HomeService homeService) {
+    public HomeController(HomeService homeService, SalesRankService salesRankService) {
         this.homeService = homeService;
+        this.salesRankService = salesRankService;
+    }
+
+    @Operation(summary = "商品销量排行榜（Top 5）")
+    @GetMapping("/product-sales-rank")
+    public ResponseDTO<List<Map<String, Object>>> productSalesRank() {
+        return Response.success(salesRankService.getTop5());
     }
 
     @Operation(summary = "首页统计")

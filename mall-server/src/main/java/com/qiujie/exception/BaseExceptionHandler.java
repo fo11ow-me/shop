@@ -1,9 +1,15 @@
 package com.qiujie.exception;
 
+import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotPermissionException;
+import cn.dev33.satoken.exception.NotRoleException;
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
+import com.qiujie.enums.BusinessStatusEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -15,6 +21,27 @@ import java.util.stream.Collectors;
 public class BaseExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(BaseExceptionHandler.class);
+
+    @ExceptionHandler(NotLoginException.class)
+    @ResponseBody
+    public ResponseEntity<ResponseDTO> handleNotLogin(NotLoginException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Response.error(BusinessStatusEnum.UNAUTHORIZED));
+    }
+
+    @ExceptionHandler(NotPermissionException.class)
+    @ResponseBody
+    public ResponseEntity<ResponseDTO> handleNotPermission(NotPermissionException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Response.error(BusinessStatusEnum.FORBIDDEN));
+    }
+
+    @ExceptionHandler(NotRoleException.class)
+    @ResponseBody
+    public ResponseEntity<ResponseDTO> handleNotRole(NotRoleException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Response.error(BusinessStatusEnum.FORBIDDEN));
+    }
 
     @ExceptionHandler(ServiceException.class)
     @ResponseBody
