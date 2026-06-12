@@ -5,7 +5,8 @@ import { getAuth, removeAuth } from '@/utils/auth'
 
 const request = axios.create({
   baseURL: '/admin-api',
-  timeout: 10000
+  timeout: 10000,
+  withCredentials: true
 })
 
 function trimValues(obj) {
@@ -21,8 +22,6 @@ request.interceptors.request.use(config => {
   config.headers['Content-Type'] = 'application/json;charset=utf-8'
   if (config.data) config.data = trimValues(config.data)
   if (config.params) config.params = trimValues(config.params)
-  const token = getAuth().token
-  if (token) config.headers.Authorization = 'Bearer ' + token
   return config
 }, error => {
   return Promise.reject(error)

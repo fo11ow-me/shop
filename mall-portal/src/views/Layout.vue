@@ -74,6 +74,8 @@
     <main class="main-content"><router-view /></main>
 
     <!-- Footer -->
+    <FloatingChat />
+
     <footer class="footer">
       <div class="footer-service wrapper">
         <div v-for="item in footerItems" :key="item.title" class="service-item">
@@ -93,6 +95,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Search, ShoppingCart } from '@element-plus/icons-vue'
+import FloatingChat from '@/components/FloatingChat.vue'
 
 import foot1 from '@/assets/img/footer-quality.png'
 import foot2 from '@/assets/img/footer-privacy.png'

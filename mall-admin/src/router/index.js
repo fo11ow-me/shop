@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useTokenStore } from '@/stores/modules/token'
+import { useUserStore } from '@/stores/modules/user'
 
 const routes = [
   {
@@ -29,8 +29,8 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const tokenStore = useTokenStore()
-  if (to.name !== 'login' && !tokenStore.token) {
+  const userStore = useUserStore()
+  if (to.name !== 'login' && !userStore.user) {
     next({ name: 'login' })
     return
   }

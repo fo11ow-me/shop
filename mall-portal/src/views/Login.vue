@@ -84,7 +84,7 @@ const handleLogin = async () => {
   loading.value = true
   try {
     const res = await login({ ...form, uuid: verificationUuid })
-    authStore.loginSuccess(res.data.token, res.data.user)
+    authStore.loginSuccess(res.data.user)
     router.push('/')
   } catch (e) { ElMessage.error(e?.message || '登录失败') } finally { loading.value = false }
 }

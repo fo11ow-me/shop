@@ -53,9 +53,7 @@ async function login() {
       const res = await apiLogin({ ...form, uuid: verificationUuid })
       if (res.code === 200) {
         const user = res.data?.user || res.data
-        const token = res.data?.token || res.token
-        setAuth({ token, user })
-        tokenStore.setToken(token)
+        setAuth({ user })
         userStore.setUser(user)
         ElMessage.success('登录成功')
         router.push('/')
