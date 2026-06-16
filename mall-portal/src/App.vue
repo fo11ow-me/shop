@@ -6,7 +6,7 @@
         <el-icon :size="20"><ShoppingCart /></el-icon>
         <span class="tip">购物车</span>
       </router-link>
-      <a href="javascript:void(0)" class="gotop-item" title="智能客服" @click="chatRef?.open()">
+      <a href="javascript:void(0)" class="gotop-item" title="智能客服">
         <el-icon :size="20"><Service /></el-icon>
         <span class="tip">客服</span>
       </a>
@@ -19,16 +19,11 @@
       </a>
     </div>
   </transition>
-  <FloatingChat ref="chatRef" />
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { ShoppingCart, Service, User, Top } from '@element-plus/icons-vue'
-import FloatingChat from '@/components/FloatingChat.vue'
-
-const chatRef = ref(null)
-
 const showBar = ref(false)
 let lastScroll = 0
 

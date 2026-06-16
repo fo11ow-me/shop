@@ -203,7 +203,7 @@ function startPolling(sessionId) {
         clearInterval(pollTimer)
         activeSessions.value = activeSessions.value.map(s => s.sessionId === sessionId ? { ...s, pending: false } : s)
         showResultMsg(true, data.msg || '订单已生成，请尽快完成支付')
-      } else if (data && (data.status === 2 || data.status === -1)) {
+      } else if (data && data.status === -1) {
         clearInterval(pollTimer)
         activeSessions.value = activeSessions.value.map(s => s.sessionId === sessionId ? { ...s, pending: false } : s)
         showResultMsg(false, data.msg || '继续浏览其他秒杀商品，下次加油！')
