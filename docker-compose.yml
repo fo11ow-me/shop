@@ -15,6 +15,8 @@ services:
     volumes:
       - ../sql/mall.sql:/docker-entrypoint-initdb.d/01-init.sql
       - mall-mysql-data:/var/lib/mysql
+    networks:
+      - mall-network
     restart: unless-stopped
 
   redis:
@@ -31,6 +33,8 @@ services:
       REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:-123456}"
     volumes:
       - mall-redis-data:/data
+    networks:
+      - mall-network
     restart: unless-stopped
 
   rabbitmq:
@@ -49,6 +53,8 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-123456}
     volumes:
       - mall-rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - mall-network
     restart: unless-stopped
 
   elasticsearch:
@@ -67,7 +73,13 @@ services:
       - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
     volumes:
       - mall-es-data:/usr/share/elasticsearch/data
+    networks:
+      - mall-network
     restart: unless-stopped
+
+networks:
+  mall-network:
+    name: mall-network
 
 volumes:
   mall-mysql-data:
