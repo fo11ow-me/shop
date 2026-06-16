@@ -4,7 +4,7 @@ import com.qiujie.entity.Order;
 import com.qiujie.enums.BusinessStatusEnum;
 import com.qiujie.enums.OrderStatusEnum;
 import com.qiujie.exception.ServiceException;
-import com.qiujie.vo.OrderVO;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,11 +58,11 @@ class OrderServiceImplTest {
     @Test
     @DisplayName("list — returns user orders with items")
     void shouldListUserOrders() {
-        List<OrderVO> orders = orderService.list(2);
+        List<Order> orders = orderService.list(2);
 
         assertNotNull(orders);
         assertTrue(orders.size() >= 2);
-        OrderVO first = orders.get(0);
+        Order first = orders.get(0);
         assertNotNull(first.getOrderSn());
     }
 
@@ -71,7 +71,7 @@ class OrderServiceImplTest {
     void shouldPayOrder() {
         orderService.pay(2, 1, 0);
 
-        OrderVO order = orderService.detail(2, 1);
+        Order order = orderService.detail(2, 1);
         assertEquals(OrderStatusEnum.PAID, order.getStatus());
     }
 
@@ -86,7 +86,7 @@ class OrderServiceImplTest {
     void shouldCancelPendingOrder() {
         orderService.cancel(1);
 
-        OrderVO order = orderService.detail(2, 1);
+        Order order = orderService.detail(2, 1);
         assertEquals(OrderStatusEnum.CANCELLED, order.getStatus());
     }
 
@@ -99,7 +99,7 @@ class OrderServiceImplTest {
     @Test
     @DisplayName("detail — returns full order with items")
     void shouldGetOrderDetail() {
-        OrderVO order = orderService.detail(2, 1);
+        Order order = orderService.detail(2, 1);
 
         assertNotNull(order);
         assertEquals(OrderStatusEnum.PENDING_PAY, order.getStatus());

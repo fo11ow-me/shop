@@ -1,7 +1,8 @@
 package com.qiujie.integration;
 
+import com.qiujie.entity.Cart;
 import com.qiujie.mapper.CartMapper;
-import com.qiujie.vo.CartVO;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,12 +26,12 @@ class CartMapperTest {
     @Test
     @DisplayName("selectByUserId — returns cart items with product info")
     void shouldSelectByUserId() {
-        List<CartVO> carts = cartMapper.selectByUserId(2);
+        List<Cart> carts = cartMapper.selectByUserId(2);
 
         assertNotNull(carts);
         assertTrue(carts.size() >= 2);
 
-        CartVO first = carts.get(0);
+        Cart first = carts.get(0);
         assertNotNull(first.getProductName());
         assertNotNull(first.getProductImg());
         assertTrue(first.getAmount() > 0);
@@ -39,7 +40,7 @@ class CartMapperTest {
     @Test
     @DisplayName("selectByUserId — returns empty for user with no cart")
     void shouldReturnEmptyForNoCart() {
-        List<CartVO> carts = cartMapper.selectByUserId(99999);
+        List<Cart> carts = cartMapper.selectByUserId(99999);
         assertTrue(carts.isEmpty());
     }
 

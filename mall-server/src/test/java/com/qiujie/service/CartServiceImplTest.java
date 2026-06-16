@@ -3,7 +3,7 @@ package com.qiujie.service;
 import com.qiujie.entity.Cart;
 import com.qiujie.enums.BusinessStatusEnum;
 import com.qiujie.exception.ServiceException;
-import com.qiujie.vo.CartVO;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,10 +27,10 @@ class CartServiceImplTest {
     @Test
     @DisplayName("list — returns cart items for user with product info")
     void shouldListCartItems() {
-        List<CartVO> items = cartService.list(2);
+        List<Cart> items = cartService.list(2);
         assertNotNull(items);
         assertTrue(items.size() >= 2);
-        CartVO first = items.get(0);
+        Cart first = items.get(0);
         assertNotNull(first.getProductName());
         assertNotNull(first.getProductImg());
     }
@@ -44,7 +44,7 @@ class CartServiceImplTest {
 
         cartService.add(2, cart);
 
-        List<CartVO> items = cartService.list(2);
+        List<Cart> items = cartService.list(2);
         assertTrue(items.stream().anyMatch(i -> i.getProductId().equals(2) && i.getAmount() == 2));
     }
 
@@ -57,7 +57,7 @@ class CartServiceImplTest {
 
         cartService.add(2, cart);
 
-        List<CartVO> items = cartService.list(2);
+        List<Cart> items = cartService.list(2);
         var existing = items.stream().filter(i -> i.getProductId().equals(1)).findFirst().orElseThrow();
         assertTrue(existing.getAmount() >= 3);
     }
@@ -81,7 +81,7 @@ class CartServiceImplTest {
 
         cartService.add(2, cart);
 
-        List<CartVO> items = cartService.list(2);
+        List<Cart> items = cartService.list(2);
         var item = items.stream().filter(i -> i.getProductId().equals(2)).findFirst().orElseThrow();
         assertEquals(1, item.getAmount());
     }
@@ -96,7 +96,7 @@ class CartServiceImplTest {
 
         cartService.update(2, cart);
 
-        List<CartVO> items = cartService.list(2);
+        List<Cart> items = cartService.list(2);
         var item = items.stream().filter(i -> i.getId().equals(1)).findFirst().orElseThrow();
         assertEquals(5, item.getAmount());
         assertEquals(0, item.getIsSelected());
@@ -117,7 +117,7 @@ class CartServiceImplTest {
     void shouldDeleteCartItem() {
         cartService.delete(2, 1);
 
-        List<CartVO> items = cartService.list(2);
+        List<Cart> items = cartService.list(2);
         assertTrue(items.stream().noneMatch(i -> i.getId().equals(1)));
     }
 
@@ -126,7 +126,7 @@ class CartServiceImplTest {
     void shouldBatchDeleteCartItems() {
         cartService.batchDelete(2, java.util.Map.of("ids", java.util.List.of(1, 2)));
 
-        List<CartVO> items = cartService.list(2);
+        List<Cart> items = cartService.list(2);
         assertTrue(items.isEmpty());
     }
 

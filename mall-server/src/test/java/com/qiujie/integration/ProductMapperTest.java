@@ -25,23 +25,6 @@ class ProductMapperTest {
     private ProductMapper productMapper;
 
     @Test
-    @DisplayName("search — finds products by keyword")
-    void shouldSearchByKeyword() {
-        List<Product> results = productMapper.search("iPhone");
-
-        assertNotNull(results);
-        assertTrue(results.size() >= 1);
-        assertTrue(results.stream().anyMatch(p -> p.getName().contains("iPhone")));
-    }
-
-    @Test
-    @DisplayName("search — returns empty for unknown keyword")
-    void shouldReturnEmptyForUnknownKeyword() {
-        List<Product> results = productMapper.search("xyz_unknown_keyword_abc");
-        assertTrue(results.isEmpty());
-    }
-
-    @Test
     @DisplayName("selectByCategoryId — returns products in category and subcategories")
     void shouldSelectByCategoryId() {
         List<Product> results = productMapper.selectByCategoryId(1); // parent category

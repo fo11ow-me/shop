@@ -1,8 +1,9 @@
 package com.qiujie.integration;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.qiujie.entity.Order;
 import com.qiujie.mapper.OrderMapper;
-import com.qiujie.vo.OrderVO;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +48,7 @@ class OrderMapperTest {
     @Test
     @DisplayName("selectPageWithParams — filters by orderSn")
     void shouldSelectPageWithOrderSn() {
-        Page<OrderVO> page = new Page<>(1, 10);
+        Page<Order> page = new Page<>(1, 10);
         var result = orderMapper.selectPageWithParams(page, "202605010001", null, null, null, null);
 
         assertEquals(1, result.getTotal());
@@ -57,7 +58,7 @@ class OrderMapperTest {
     @Test
     @DisplayName("selectPageWithParams — filters by userName")
     void shouldSelectPageWithUserName() {
-        Page<OrderVO> page = new Page<>(1, 10);
+        Page<Order> page = new Page<>(1, 10);
         var result = orderMapper.selectPageWithParams(page, null, "测试", null, null, null);
 
         assertTrue(result.getTotal() >= 1);
@@ -66,7 +67,7 @@ class OrderMapperTest {
     @Test
     @DisplayName("selectPageWithParams — returns empty for unknown orderSn")
     void shouldReturnEmptyForUnknownOrderSn() {
-        Page<OrderVO> page = new Page<>(1, 10);
+        Page<Order> page = new Page<>(1, 10);
         var result = orderMapper.selectPageWithParams(page, "999999999999", null, null, null, null);
 
         assertEquals(0, result.getTotal());
