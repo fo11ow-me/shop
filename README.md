@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/MySQL-8.0-blue" alt="MySQL" />
   <img src="https://img.shields.io/badge/Redis-7-red" alt="Redis" />
   <img src="https://img.shields.io/badge/RabbitMQ-3-FF6600" alt="RabbitMQ" />
+  <img src="https://img.shields.io/badge/Elasticsearch-7-00BFB3" alt="Elasticsearch" />
 </p>
 
 <p align="center">
@@ -153,12 +154,6 @@ mall/
 │       ├── router/            # 路由
 │       └── views/             # 页面
 ├── docker-compose.yml         # 本地开发中间件
-├── deploy/                    # 部署配置
-│   ├── docker-compose.server.yml  # 服务器应用 + 中间件
-│   ├── deploy.sh                  # 部署脚本
-│   ├── deploy-server.sh           # 服务器端部署脚本
-│   ├── nginx/                     # Nginx 配置
-│   └── docker-compose.server.env.example  # 环境变量模板
 └── sql/                       # 数据库初始化
 ```
 
@@ -175,17 +170,6 @@ cd mall-server
 cd mall-admin  # or mall-portal
 npx playwright test
 ```
-
----
-
-## 部署 / Deployment
-
-```bash
-bash deploy/deploy.sh                # 标准部署 / Standard
-bash deploy/deploy.sh --skip-tests   # 跳过测试 / Skip tests
-```
-
-流程 / Flow：本地构建 / Build → 推送镜像 / Push → 服务器拉取 / Pull → 健康检查 / Health → 失败回滚 / Rollback
 
 ---
 
