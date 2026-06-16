@@ -24,7 +24,7 @@
 
 ## 功能概览 / Features
 
-- 用户注册登录 / User authentication (JWT + 图形验证码)
+- 用户注册登录 / User authentication (Sa-Token + 图形验证码)
 - 商品浏览搜索 / Product catalog with search
 - 购物车管理 / Shopping cart
 - 订单结算 / Order & checkout
@@ -39,7 +39,7 @@
 | 层级 / Layer | 技术 / Technology |
 |-------------|-------------------|
 | 后端框架 / Backend | Spring Boot 3.2.5 + MyBatis-Plus 3.5.5 |
-| 安全 / Security | Spring Security + JWT |
+| 安全 / Security | Sa-Token |
 | 数据库 / Database | MySQL 8.0 + Redis 7 |
 | 消息队列 / MQ | RabbitMQ 3 |
 | 搜索引擎 / Search | Elasticsearch 7 |
@@ -118,7 +118,7 @@ npm run dev
 | MySQL | 数据库 | 3306 |
 | Redis | 缓存 | 6379 |
 | RabbitMQ | 消息队列 | 5672 / 15672 |
-| Elasticsearch | 搜索引擎 | 9200 |
+| Elasticsearch | 搜索引擎 | 19200 |
 
 ---
 

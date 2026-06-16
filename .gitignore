@@ -45,6 +45,17 @@ docs/
 
 # Agent instructions
 AGENTS.md
+.agents/
+
+# Knowledge graph cache
+.understand-anything/
+**/.understand-anything/
+
+# Skills lock file
+skills-lock.json
+
+# Root-level AI instructions (use .claude/ instead)
+CLAUDE.md
 
 # Codex config
 .codex/
