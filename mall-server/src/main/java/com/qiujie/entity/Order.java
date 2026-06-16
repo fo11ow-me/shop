@@ -21,6 +21,9 @@ public class Order {
     @TableField("user_id")
     private Integer userId;
 
+    @TableField("seckill_session_id")
+    private Integer seckillSessionId;
+
     @TableField("address_id")
     private Integer addressId;
 

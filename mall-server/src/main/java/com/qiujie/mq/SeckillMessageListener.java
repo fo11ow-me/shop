@@ -22,8 +22,8 @@ import com.rabbitmq.client.Channel;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.AmqpHeaders;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import org.springframework.transaction.support.TransactionTemplate;
+
 import org.springframework.context.annotation.Profile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,8 +32,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -41,6 +39,10 @@ import java.util.Map;
 
 /**
  * 秒杀订单消息消费者
+ * <p>
+ * 事务边界：仅 {@link #createSeckillOrder} 在事务内执行，ack / 重试 / 回滚在事务外，
+ * 避免 ack 被事务回滚影响、也避免重试消息发送被事务拦截。
+ * </p>
  *
  * @author qiujie
  */
@@ -59,11 +61,13 @@ public class SeckillMessageListener {
     private final ProductImgMapper productImgMapper;
     private final RedisUtil redisUtil;
     private final RabbitTemplate rabbitTemplate;
+    private final TransactionTemplate transactionTemplate;
     private final ReconcileLogService reconcileLogService;
 
     public SeckillMessageListener(OrderMapper orderMapper, OrderItemMapper orderItemMapper,
                                    ProductMapper productMapper, ProductImgMapper productImgMapper,
                                    RedisUtil redisUtil, RabbitTemplate rabbitTemplate,
+                                   TransactionTemplate transactionTemplate,
                                    ReconcileLogService reconcileLogService) {
         this.orderMapper = orderMapper;
         this.orderItemMapper = orderItemMapper;
@@ -71,43 +75,38 @@ public class SeckillMessageListener {
         this.productImgMapper = productImgMapper;
         this.redisUtil = redisUtil;
         this.rabbitTemplate = rabbitTemplate;
+        this.transactionTemplate = transactionTemplate;
         this.reconcileLogService = reconcileLogService;
     }
 
     private static final int MAX_RETRIES = 3;
     private static final String RETRY_HEADER = "x-retry-count";
-    private static final ExecutorService RETRY_EXECUTOR = Executors.newFixedThreadPool(4);
 
     /**
-     * 消费秒杀订单消息，创建订单并扣减库存
+     * 消费秒杀订单消息，创建订单并扣减库存。
+     * 事务仅包裹 {@link #createSeckillOrder}，ack / 重试 / 回滚在事务外处理。
      */
-    @Transactional
     @RabbitListener(queues = RabbitMQConfig.SECKILL_QUEUE)
     public void handleSeckillOrder(SeckillMessage message, Channel channel,
                                     @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag,
                                     @Header(value = RETRY_HEADER, required = false) Integer retryCount) {
-        // 消息超时检测：延迟超过 10 秒则丢弃并回滚
-        long delay = System.currentTimeMillis() - message.getCreateTime();
-        if (delay > 10_000) {
-            log.warn("Seckill message timeout {}ms, sessionId={} userId={}",
-                    delay, message.getSessionId(), message.getUserId());
-            String stockKey = SECKILL_STOCK_KEY + message.getSessionId();
-            int stockBefore = toInt(redisUtil.get(stockKey));
-            rollbackStock(message);
-            reconcileLogService.log(message.getSessionId(), message.getUserId(),
-                    "TIMEOUT", stockBefore, 0);
-            try { channel.basicAck(deliveryTag, false); } catch (IOException ignored) {}
-            return;
-        }
         try {
-            createSeckillOrder(message);
+            transactionTemplate.executeWithoutResult(status -> createSeckillOrder(message));
             writeSuccessResult(message);
             channel.basicAck(deliveryTag, false);
         } catch (Exception e) {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             int currentRetry = retryCount != null ? retryCount : 0;
             if (currentRetry < MAX_RETRIES) {
-                retryWithDelay(message, currentRetry + 1);
+                // 清除幂等标记，使重试消息可以重新创建订单（原事务已回滚）
+                String processedKey = "seckill:processed:" + message.getSessionId() + ":" + message.getUserId();
+                redisUtil.del(processedKey);
+                rabbitTemplate.convertAndSend(
+                        RabbitMQConfig.SECKILL_RETRY_QUEUE,
+                        message,
+                        msg -> {
+                            msg.getMessageProperties().setHeader(RETRY_HEADER, currentRetry + 1);
+                            return msg;
+                        });
                 try {
                     channel.basicAck(deliveryTag, false);
                 } catch (IOException ignored) {
@@ -115,6 +114,8 @@ public class SeckillMessageListener {
             } else {
                 log.error("Seckill order failed after {} retries: sessionId={} userId={}",
                         MAX_RETRIES, message.getSessionId(), message.getUserId(), e);
+                String processedKey = "seckill:processed:" + message.getSessionId() + ":" + message.getUserId();
+                redisUtil.del(processedKey);
                 rollbackStock(message);
                 writeFailureResult(message);
                 try {
@@ -175,6 +176,7 @@ public class SeckillMessageListener {
 
         Order order = new Order();
         order.setUserId(message.getUserId());
+        order.setSeckillSessionId(message.getSessionId());
         order.setOrderSn(generateOrderSn());
         order.setTotalAmount(message.getSeckillPrice());
         order.setPayMethod(PayMethodEnum.UNKNOWN);
@@ -209,25 +211,6 @@ public class SeckillMessageListener {
         result.put("status", 1);
         result.put("msg", "秒杀成功");
         redisUtil.set(resultKey, JSONUtil.toJsonStr(result), 120);
-    }
-
-    private void retryWithDelay(SeckillMessage message, int retryCount) {
-        RETRY_EXECUTOR.submit(() -> {
-            try {
-                Thread.sleep((long) Math.pow(2, retryCount) * 1000L);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
-            }
-            rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.SECKILL_EXCHANGE,
-                    RabbitMQConfig.SECKILL_ROUTING_KEY,
-                    message,
-                    msg -> {
-                        msg.getMessageProperties().setHeader(RETRY_HEADER, retryCount);
-                        return msg;
-                    });
-        });
     }
 
     /**

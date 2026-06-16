@@ -31,19 +31,47 @@ public class RabbitMQConfig {
 
     // ======================== 秒杀队列 ========================
 
+    public static final String SECKILL_DLX_EXCHANGE = "seckill.order.dlx.exchange";
+    public static final String SECKILL_DLX_ROUTING_KEY = "seckill.order.dlx";
+    public static final String SECKILL_RETRY_QUEUE = "seckill.retry.delay.queue";
+    private static final int SECKILL_RETRY_TTL = 5 * 1000; // 5 秒
+
     @Bean
     public DirectExchange seckillExchange() {
         return new DirectExchange(SECKILL_EXCHANGE);
     }
 
     @Bean
+    public DirectExchange seckillDlxExchange() {
+        return new DirectExchange(SECKILL_DLX_EXCHANGE);
+    }
+
+    @Bean
     public Queue seckillQueue() {
-        return QueueBuilder.durable(SECKILL_QUEUE).build();
+        return QueueBuilder.durable(SECKILL_QUEUE)
+                .deadLetterExchange(SECKILL_DLX_EXCHANGE)
+                .deadLetterRoutingKey(SECKILL_DLX_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     public Binding seckillBinding() {
         return BindingBuilder.bind(seckillQueue()).to(seckillExchange()).with(SECKILL_ROUTING_KEY);
+    }
+
+    @Bean
+    public Queue seckillRetryQueue() {
+        return QueueBuilder.durable(SECKILL_RETRY_QUEUE)
+                .ttl(SECKILL_RETRY_TTL)
+                .deadLetterExchange(SECKILL_EXCHANGE)
+                .deadLetterRoutingKey(SECKILL_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
+    public Binding seckillRetryBinding() {
+        return BindingBuilder.bind(seckillRetryQueue())
+                .to(seckillDlxExchange()).with(SECKILL_DLX_ROUTING_KEY);
     }
 
     // ======================== 订单超时取消 ========================

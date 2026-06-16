@@ -130,6 +130,9 @@ CREATE TABLE IF NOT EXISTS `oms_order` (
     KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单表';
 
+ALTER TABLE `oms_order` ADD COLUMN `seckill_session_id` INT DEFAULT NULL COMMENT '秒杀场次ID' AFTER `user_id`;
+ALTER TABLE `oms_order` ADD UNIQUE KEY `uk_user_seckill` (`user_id`, `seckill_session_id`);
+
 -- 订单明细表
 CREATE TABLE IF NOT EXISTS `oms_order_item` (
     `id`            INT             NOT NULL AUTO_INCREMENT  COMMENT '明细ID',

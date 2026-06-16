@@ -19,7 +19,6 @@ import com.qiujie.mq.SeckillMessage;
 import com.qiujie.service.SeckillService;
 import com.qiujie.util.RedisUtil;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -45,17 +44,18 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
     private final ProductImgMapper productImgMapper;
     private final RedisUtil redisUtil;
 
-    @Autowired(required = false)
-    private RabbitTemplate rabbitTemplate;
+    private final RabbitTemplate rabbitTemplate;
 
     public SeckillServiceImpl(SeckillSessionMapper seckillSessionMapper,
                               ProductMapper productMapper,
                               ProductImgMapper productImgMapper,
-                              RedisUtil redisUtil) {
+                              RedisUtil redisUtil,
+                              RabbitTemplate rabbitTemplate) {
         this.seckillSessionMapper = seckillSessionMapper;
         this.productMapper = productMapper;
         this.productImgMapper = productImgMapper;
         this.redisUtil = redisUtil;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     @Override
@@ -72,10 +72,6 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (SeckillSession session : sessions) {
-            String stockKey = SECKILL_STOCK_KEY + session.getId();
-            if (redisUtil.get(stockKey) == null) {
-                redisUtil.set(stockKey, String.valueOf(session.getSeckillStock()));
-            }
             result.add(sessionToMap(session, productMap.get(session.getProductId()),
                     imgMap.get(session.getProductId())));
         }
@@ -116,18 +112,14 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
             throw new ServiceException(BusinessStatusEnum.SECKILL_SESSION_EXPIRED);
         }
 
-        // 2. Lua 脚本：原子执行「库存初始化 + 防重检查 + 扣库存 + 标记用户 + 流水日志」
+        // 2. Lua 脚本：原子执行「库存初始化 + 防重检查 + 扣库存 + 标记用户」
         String stockKey = SECKILL_STOCK_KEY + sessionId;
         String orderKey = SECKILL_ORDER_KEY + sessionId + ":" + userId;
-        String traceKey = "seckill:trace:" + sessionId;
         String lua = """
             local stockKey = KEYS[1]
             local orderKey = KEYS[2]
-            local traceKey = KEYS[3]
             local initStock = tonumber(ARGV[1])
             local orderTtl = tonumber(ARGV[2])
-            local userId = ARGV[3]
-            local sessionId = ARGV[4]
 
             if redis.call('EXISTS', stockKey) == 0 then
                 redis.call('SET', stockKey, initStock)
@@ -146,20 +138,12 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
 
             redis.call('SET', stockKey, stock - 1)
             redis.call('SET', orderKey, '1', 'EX', orderTtl)
-
-            -- 流水日志：原子记录扣库存操作
-            local timeArr = redis.call('TIME')
-            local ts = tonumber(timeArr[1]) * 1000 + math.floor(tonumber(timeArr[2]) / 1000)
-            redis.call('HSET', traceKey, userId,
-                string.format('{"userId":%s,"sessionId":%s,"type":"DEDUCT","before":%d,"after":%d,"ts":%d}',
-                    userId, sessionId, stock, stock - 1, ts))
-            redis.call('EXPIRE', traceKey, orderTtl)
             return 1
             """;
 
         Long result = redisUtil.executeLua(lua, Long.class,
-                List.of(stockKey, orderKey, traceKey),
-                session.getSeckillStock(), 86400, String.valueOf(userId), String.valueOf(sessionId));
+                List.of(stockKey, orderKey),
+                session.getSeckillStock(), 86400);
         if (result == null) {
             throw new ServiceException(BusinessStatusEnum.ERROR);
         }
@@ -187,9 +171,16 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
             rabbitTemplate.convertAndSend(RabbitMQConfig.SECKILL_EXCHANGE,
                     RabbitMQConfig.SECKILL_ROUTING_KEY, message);
         } catch (Exception e) {
-            // RabbitMQ 不可用时回滚——删除库存 key，下次访问从 DB 重载
-            redisUtil.del(stockKey);
-            redisUtil.del(orderKey);
+            // RabbitMQ 不可用时原子回滚库存，避免删 key 丢失已扣减量
+            String rollbackLua = """
+                local raw = redis.call('GET', KEYS[1])
+                if raw then
+                    raw = raw:gsub('"', '')
+                    redis.call('SET', KEYS[1], tonumber(raw) + 1)
+                end
+                redis.call('DEL', KEYS[2])
+                """;
+            redisUtil.executeLua(rollbackLua, Void.class, List.of(stockKey, orderKey));
             throw new ServiceException(BusinessStatusEnum.ERROR);
         }
     }
@@ -210,7 +201,19 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
     @Override
     public Map<String, Object> listPage(Integer current, Integer size, Integer status) {
         Page<SeckillSession> page = new Page<>(current, size);
-        IPage<SeckillSession> result = seckillSessionMapper.selectPage(page, null);
+        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<SeckillSession> wrapper = null;
+        if (status != null) {
+            wrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            LocalDateTime now = LocalDateTime.now();
+            if (status == 0) {
+                wrapper.le("start_time", now).ge("end_time", now);
+            } else if (status == 1) {
+                wrapper.gt("start_time", now);
+            } else if (status == 2) {
+                wrapper.lt("end_time", now);
+            }
+        }
+        IPage<SeckillSession> result = seckillSessionMapper.selectPage(page, wrapper);
         Map<String, Object> data = new HashMap<>();
         data.put("records", result.getRecords());
         data.put("total", result.getTotal());
@@ -224,6 +227,9 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
         if (session.getSeckillPrice() == null || session.getSeckillStock() == null
                 || session.getStartTime() == null || session.getEndTime() == null) {
             throw new ServiceException(BusinessStatusEnum.PARAM_ERROR);
+        }
+        if (!session.getEndTime().isAfter(session.getStartTime())) {
+            throw new ServiceException(BusinessStatusEnum.PARAM_ERROR.getCode(), "结束时间必须晚于开始时间");
         }
         Product product = productMapper.selectById(session.getProductId());
         if (product == null) {
@@ -244,6 +250,9 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
         }
         if (existing.getEndTime().isBefore(LocalDateTime.now())) {
             throw new ServiceException(BusinessStatusEnum.SECKILL_SESSION_EXPIRED);
+        }
+        if (!session.getEndTime().isAfter(session.getStartTime())) {
+            throw new ServiceException(BusinessStatusEnum.PARAM_ERROR.getCode(), "结束时间必须晚于开始时间");
         }
         seckillSessionMapper.updateById(session);
         // 同步缓存
@@ -281,6 +290,7 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
         }
 
         map.put("seckillPrice", session.getSeckillPrice());
+        map.put("totalStock", session.getSeckillStock());
         map.put("remainingStock", getRemainingStock(session.getId(), session.getSeckillStock()));
         map.put("startTime", session.getStartTime());
         map.put("endTime", session.getEndTime());

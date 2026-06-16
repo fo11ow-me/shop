@@ -1,15 +1,12 @@
 package com.qiujie.mq;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.qiujie.config.RabbitMQConfig;
 import com.qiujie.entity.Order;
 import com.qiujie.entity.OrderItem;
-import com.qiujie.entity.SeckillSession;
 import com.qiujie.enums.OrderStatusEnum;
 import com.qiujie.mapper.OrderItemMapper;
 import com.qiujie.mapper.OrderMapper;
 import com.qiujie.mapper.ProductMapper;
-import com.qiujie.mapper.SeckillSessionMapper;
 import com.qiujie.util.RedisUtil;
 import com.qiujie.util.SalesRankService;
 import com.rabbitmq.client.Channel;
@@ -21,7 +18,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -38,17 +34,15 @@ public class OrderTimeoutListener {
 
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
-    private final SeckillSessionMapper seckillSessionMapper;
     private final ProductMapper productMapper;
     private final RedisUtil redisUtil;
     private final SalesRankService salesRankService;
 
     public OrderTimeoutListener(OrderMapper orderMapper, OrderItemMapper orderItemMapper,
-                                 SeckillSessionMapper seckillSessionMapper, ProductMapper productMapper,
+                                 ProductMapper productMapper,
                                  RedisUtil redisUtil, SalesRankService salesRankService) {
         this.orderMapper = orderMapper;
         this.orderItemMapper = orderItemMapper;
-        this.seckillSessionMapper = seckillSessionMapper;
         this.productMapper = productMapper;
         this.redisUtil = redisUtil;
         this.salesRankService = salesRankService;
@@ -92,18 +86,13 @@ public class OrderTimeoutListener {
         }
     }
 
+    /**
+     * 通过 Order.seckillSessionId 精确恢复对应场次库存，避免 productId+price 误匹配多场次
+     */
     private void restoreSeckillStock(Order order) {
+        Integer sessionId = order.getSeckillSessionId();
+        if (sessionId == null) return;
         try {
-            List<OrderItem> items = orderItemMapper.selectList(
-                    new QueryWrapper<OrderItem>().eq("order_id", order.getId()));
-            if (items.isEmpty()) return;
-            BigDecimal price = order.getTotalAmount();
-            Integer productId = items.get(0).getProductId();
-            List<SeckillSession> sessions = seckillSessionMapper.selectList(
-                    new QueryWrapper<SeckillSession>()
-                            .eq("product_id", productId)
-                            .eq("seckill_price", price));
-            // Lua 原子递增库存，不再删 key
             String lua = """
                 local raw = redis.call('GET', KEYS[1])
                 if raw then
@@ -111,9 +100,7 @@ public class OrderTimeoutListener {
                     redis.call('SET', KEYS[1], tonumber(raw) + 1)
                 end
                 """;
-            for (SeckillSession s : sessions) {
-                redisUtil.executeLua(lua, Void.class, List.of(SECKILL_STOCK_KEY + s.getId()));
-            }
+            redisUtil.executeLua(lua, Void.class, List.of(SECKILL_STOCK_KEY + sessionId));
         } catch (Exception e) {
             log.warn("Failed to restore seckill stock for order {}", order.getId(), e);
         }
