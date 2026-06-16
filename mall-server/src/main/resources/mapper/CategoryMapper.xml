@@ -2,33 +2,12 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.qiujie.mapper.CategoryMapper">
 
-    <resultMap id="categoryMap" type="com.qiujie.entity.Category">
-        <id property="id" column="id"/>
-        <result property="name" column="name"/>
-        <result property="parentId" column="parent_id"/>
-        <collection property="children" ofType="com.qiujie.entity.Category">
-            <id property="id" column="child_id"/>
-            <result property="name" column="child_name"/>
-            <result property="parentId" column="child_parent_id"/>
-        </collection>
-    </resultMap>
-
-    <select id="selectAll" resultType="com.qiujie.entity.Category">
+<select id="selectAll" resultType="com.qiujie.entity.Category">
         SELECT id, name, parent_id FROM pms_category WHERE is_deleted = 0 ORDER BY id
     </select>
 
     <select id="selectByParentId" resultType="com.qiujie.entity.Category">
         SELECT id, name, parent_id FROM pms_category WHERE parent_id = #{parentId} AND is_deleted = 0
-    </select>
-
-    <select id="selectWithProducts" resultMap="categoryMap">
-        SELECT
-            c.id, c.name, c.parent_id,
-            c2.id AS child_id, c2.name AS child_name, c2.parent_id AS child_parent_id
-        FROM pms_category c
-        LEFT JOIN pms_category c2 ON c2.parent_id = c.id AND c2.is_deleted = 0
-        WHERE c.parent_id = 0 AND c.is_deleted = 0
-        ORDER BY c.id, c2.id
     </select>
 
 </mapper>

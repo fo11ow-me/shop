@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.qiujie.entity.Product;
-import com.qiujie.vo.ProductVO;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 
@@ -26,9 +25,7 @@ public interface ProductMapper extends BaseMapper<Product> {
 
     List<Product> selectByCategoryId(@Param("categoryId") Integer categoryId);
 
-    List<Product> search(@Param("keyword") String keyword);
-
-    ProductVO selectDetailById(@Param("id") Integer id);
+    Product selectDetailById(@Param("id") Integer id);
 
     List<Product> selectByCategoryIdLimit(@Param("categoryId") Integer categoryId, @Param("limit") Integer limit);
 

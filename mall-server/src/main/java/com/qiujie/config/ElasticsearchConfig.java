@@ -24,7 +24,7 @@ import java.util.List;
  * @author qiujie
  */
 @Configuration
-@Profile("prod")
+@Profile("!test")
 public class ElasticsearchConfig implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(ElasticsearchConfig.class);

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.qiujie.mapper.ProductMapper">
 
-    <resultMap id="productDetailMap" type="com.qiujie.vo.ProductVO">
+    <resultMap id="productDetailMap" type="com.qiujie.entity.Product">
         <id property="id" column="id"/>
         <result property="name" column="name"/>
         <result property="price" column="price"/>
@@ -27,14 +27,6 @@
             SELECT id FROM pms_category WHERE parent_id = #{categoryId} AND is_deleted = 0
             UNION SELECT #{categoryId}
         )
-        ORDER BY create_time DESC
-    </select>
-
-    <select id="search" resultType="com.qiujie.entity.Product">
-        SELECT id, name, price, stock, category_id, detail
-        FROM pms_product
-        WHERE is_deleted = 0
-        AND name LIKE CONCAT('%', #{keyword}, '%')
         ORDER BY create_time DESC
     </select>
 
