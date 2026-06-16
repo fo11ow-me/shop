@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.qiujie.mapper.CartMapper">
 
-    <select id="selectByUserId" resultType="com.qiujie.vo.CartVO">
+    <select id="selectByUserId" resultType="com.qiujie.entity.Cart">
         SELECT c.id, c.user_id, c.product_id, c.amount, c.is_selected,
                p.name AS product_name, p.price AS product_price, p.stock AS product_stock,
                (SELECT url FROM pms_product_img WHERE product_id = c.product_id AND is_deleted = 0 LIMIT 1) AS product_img

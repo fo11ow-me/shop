@@ -11,8 +11,6 @@ import com.qiujie.enums.OrderStatusEnum;
 import com.qiujie.enums.PayMethodEnum;
 import com.qiujie.exception.ServiceException;
 import com.qiujie.mapper.*;
-import com.qiujie.vo.CartVO;
-import com.qiujie.vo.OrderVO;
 import com.qiujie.service.OrderService;
 import com.qiujie.config.RabbitMQConfig;
 import com.qiujie.mq.OrderTimeoutMessage;
@@ -85,19 +83,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     private Order doCreateFromCart(Integer userId, Map<String, Object> params,
                                     Integer addressId, PayMethodEnum payMethod) {
-        List<CartVO> cartList = cartMapper.selectByUserId(userId);
-        List<CartVO> selectedCarts = new ArrayList<>();
+        List<Cart> cartList = cartMapper.selectByUserId(userId);
+        List<Cart> selectedCarts = new ArrayList<>();
 
         @SuppressWarnings("unchecked")
         List<Integer> cartIds = (List<Integer>) params.get("cartIds");
         if (cartIds != null && !cartIds.isEmpty()) {
-            for (CartVO cart : cartList) {
+            for (Cart cart : cartList) {
                 if (cartIds.contains(cart.getId())) {
                     selectedCarts.add(cart);
                 }
             }
         } else {
-            for (CartVO cart : cartList) {
+            for (Cart cart : cartList) {
                 if (cart.getIsSelected() != null && cart.getIsSelected() == 1) {
                     selectedCarts.add(cart);
                 }
@@ -108,14 +106,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
 
         // 批量查询商品，避免 N+1
-        List<Integer> productIds = selectedCarts.stream().map(CartVO::getProductId).distinct().toList();
+        List<Integer> productIds = selectedCarts.stream().map(Cart::getProductId).distinct().toList();
         Map<Integer, Product> productMap = productMapper.selectBatchIds(productIds).stream()
                 .collect(Collectors.toMap(Product::getId, p -> p));
 
         Order order = buildOrder(userId, addressId, payMethod, params);
         save(order);
         sendTimeoutMessage(order.getId());
-        for (CartVO cart : selectedCarts) {
+        for (Cart cart : selectedCarts) {
             Product product = productMap.get(cart.getProductId());
             if (product == null) {
                 throw new ServiceException(BusinessStatusEnum.PRODUCT_STOCK_INSUFFICIENT.getCode(), "商品[" + cart.getProductName() + "]不存在");
@@ -129,7 +127,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         updateById(order);
         cacheOrderItems(order.getId());
 
-        for (CartVO cart : selectedCarts) {
+        for (Cart cart : selectedCarts) {
             cartMapper.deleteById(cart.getId());
         }
 
@@ -181,17 +179,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         adjustSalesRank(id, 1);
     }
 
-    public List<OrderVO> list(Integer userId) {
+    public List<Order> list(Integer userId) {
         return orderMapper.selectByUserId(userId);
     }
 
-    public List<OrderVO> listByStatus(Integer userId, Integer status) {
-        List<OrderVO> all = orderMapper.selectByUserId(userId);
+    public List<Order> listByStatus(Integer userId, Integer status) {
+        List<Order> all = orderMapper.selectByUserId(userId);
         return all.stream().filter(o -> o.getStatus() != null && o.getStatus().getCode() == status).toList();
     }
 
-    public OrderVO detail(Integer userId, Integer id) {
-        OrderVO order = orderMapper.selectDetailById(id);
+    public Order detail(Integer userId, Integer id) {
+        Order order = orderMapper.selectDetailById(id);
         if (order == null || !order.getUserId().equals(userId)) {
             throw new ServiceException(BusinessStatusEnum.ORDER_NOT_EXIST);
         }
@@ -206,9 +204,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         removeById(id);
     }
 
-    public IPage<OrderVO> list(Integer current, Integer size, String orderSn, String userName,
+    public IPage<Order> list(Integer current, Integer size, String orderSn, String userName,
                                 String status, String startTime, String endTime) {
-        Page<OrderVO> page = new Page<>(current, size);
+        Page<Order> page = new Page<>(current, size);
         List<Integer> statusList = null;
         if (status != null && !status.isEmpty()) {
             statusList = Arrays.stream(status.split(","))
@@ -219,7 +217,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         return orderMapper.selectPageWithParams(page, orderSn, userName, statusList, startTime, endTime);
     }
 
-    public OrderVO detail(Integer id) {
+    public Order detail(Integer id) {
         return orderMapper.selectDetailById(id);
     }
 
@@ -393,8 +391,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             }
             return;
         }
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> snapshot = JSONUtil.toBean(json, List.class);
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        List<Map<String, Object>> snapshot = (List) JSONUtil.toList(json, Map.class);
         for (Map<String, Object> item : snapshot) {
             int productId = (int) item.get("productId");
             int amount = (int) item.get("amount");

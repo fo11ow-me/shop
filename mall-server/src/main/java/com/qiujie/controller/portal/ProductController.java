@@ -4,22 +4,18 @@ import com.qiujie.document.ProductDocument;
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
 import com.qiujie.entity.Category;
-import com.qiujie.service.OssService;
-import com.qiujie.service.ProductService;
-import com.qiujie.vo.ProductVO;
+import com.qiujie.entity.Product;
+import com.qiujie.service.ImageService;
+import com.qiujie.service.ProductSearchService;
+import com.qiujie.service.ProductViewService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
 import java.util.Map;
 
 @RestController("portalProductController")
@@ -27,27 +23,28 @@ import java.util.Map;
 @Tag(name = "门户端-商品")
 public class ProductController {
 
-    private final ProductService productService;
-    private final OssService ossService;
+    private final ProductViewService productViewService;
+    private final ProductSearchService productSearchService;
+    private final ImageService imageService;
 
-    @Value("${upload.path:D:/project/idea/mall/file/}")
-    private String uploadPath;
-
-    public ProductController(ProductService productService, OssService ossService) {
-        this.productService = productService;
-        this.ossService = ossService;
+    public ProductController(ProductViewService productViewService,
+                             ProductSearchService productSearchService,
+                             ImageService imageService) {
+        this.productViewService = productViewService;
+        this.productSearchService = productSearchService;
+        this.imageService = imageService;
     }
 
     @Operation(summary = "首页数据")
     @GetMapping("/home")
     public ResponseDTO<List<Map<String, Object>>> home() {
-        return Response.success(productService.home());
+        return Response.success(productViewService.home());
     }
 
     @Operation(summary = "分类列表")
     @GetMapping("/categories")
     public ResponseDTO<List<Category>> categories() {
-        return Response.success(productService.categories());
+        return Response.success(productViewService.categories());
     }
 
     @Operation(summary = "按分类查询商品")
@@ -55,7 +52,7 @@ public class ProductController {
     public ResponseDTO<Map<String, Object>> getByCategory(@PathVariable Integer id,
                                                            @RequestParam(defaultValue = "1") Integer current,
                                                            @RequestParam(defaultValue = "10") Integer size) {
-        return Response.success(productService.getByCategory(id, current, size));
+        return Response.success(productViewService.getByCategory(id, current, size));
     }
 
     @Operation(summary = "搜索商品")
@@ -63,7 +60,7 @@ public class ProductController {
     public ResponseDTO<Map<String, Object>> search(@RequestParam String keyword,
                                                     @RequestParam(defaultValue = "1") Integer current,
                                                     @RequestParam(defaultValue = "10") Integer size) {
-        var result = productService.search(keyword, current, size);
+        var result = productSearchService.search(keyword, current, size);
         if (result == null) {
             return Response.success();
         }
@@ -72,61 +69,21 @@ public class ProductController {
 
     @Operation(summary = "商品详情")
     @GetMapping("/detail/{id}")
-    public ResponseDTO<ProductVO> detail(@PathVariable Integer id) {
-        return Response.success(productService.detail(id));
+    public ResponseDTO<Product> detail(@PathVariable Integer id) {
+        return Response.success(productViewService.detail(id));
     }
 
     @Operation(summary = "商品推荐（看了又看）")
     @GetMapping("/recommend/{id}")
     public ResponseDTO<List<ProductDocument>> recommend(@PathVariable Integer id,
                                                          @RequestParam(defaultValue = "8") Integer size) {
-        return Response.success(productService.recommend(id, size));
+        return Response.success(productSearchService.recommend(id, size));
     }
 
     @Operation(summary = "获取商品图片")
     @GetMapping("/img")
     public void image(@RequestParam("key") String key, HttpServletResponse response) throws IOException {
-        String fileName = key.contains("/") ? key : "product/" + key;
-        String ext = "";
-        int dot = fileName.lastIndexOf('.');
-        if (dot > 0) ext = fileName.substring(dot + 1).toLowerCase();
-        String contentType = switch (ext) {
-            case "png" -> "image/png";
-            case "gif" -> "image/gif";
-            case "webp" -> "image/webp";
-            default -> "image/jpeg";
-        };
-        byte[] bytes;
-        Path localPath = Paths.get(uploadPath, fileName).normalize();
-        if (!localPath.startsWith(Paths.get(uploadPath).normalize())) {
-            response.setStatus(404);
-            return;
-        }
-        if (Files.exists(localPath)) {
-            bytes = Files.readAllBytes(localPath);
-        } else {
-            try {
-                bytes = ossService.download(fileName);
-                try {
-                    Files.createDirectories(localPath.getParent());
-                    Files.write(localPath, bytes);
-                } catch (Exception ignored) {
-                    // 缓存写入失败不影响图片返回
-                }
-            }
-            catch (Exception e) {
-                Path defaultPath = Paths.get(uploadPath, "product/default.png");
-                if (Files.exists(defaultPath)) {
-                    bytes = Files.readAllBytes(defaultPath);
-                    contentType = "image/png";
-                } else {
-                    bytes = new byte[0];
-                }
-            }
-        }
-        response.setContentType(contentType);
-        response.setHeader("Cache-Control", "no-cache");
-        response.getOutputStream().write(bytes);
+        imageService.serveProductImage(key, response);
     }
 
 }

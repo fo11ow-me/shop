@@ -7,7 +7,6 @@ import com.qiujie.enums.BusinessStatusEnum;
 import com.qiujie.exception.ServiceException;
 import com.qiujie.service.OrderService;
 import cn.dev33.satoken.stp.StpUtil;
-import com.qiujie.vo.OrderVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
@@ -48,7 +47,7 @@ public class OrderController {
 
     @Operation(summary = "订单列表")
     @GetMapping("/list")
-    public ResponseDTO<List<OrderVO>> list(@RequestParam(required = false) Integer status) {
+    public ResponseDTO<List<Order>> list(@RequestParam(required = false) Integer status) {
         Integer userId = StpUtil.getLoginIdAsInt();
         if (status != null) {
             return Response.success(orderService.listByStatus(userId, status));
@@ -58,14 +57,14 @@ public class OrderController {
 
     @Operation(summary = "订单详情")
     @GetMapping("/detail/{id}")
-    public ResponseDTO<OrderVO> detail(@PathVariable Integer id) {
+    public ResponseDTO<Order> detail(@PathVariable Integer id) {
         return Response.success(orderService.detail(StpUtil.getLoginIdAsInt(), id));
     }
 
     @Operation(summary = "取消订单")
     @PutMapping("/cancel/{id}")
     public ResponseDTO<Void> cancel(@PathVariable Integer id) {
-        OrderVO order = orderService.detail(StpUtil.getLoginIdAsInt(), id);
+        Order order = orderService.detail(StpUtil.getLoginIdAsInt(), id);
         if (order == null) {
             throw new ServiceException(BusinessStatusEnum.ORDER_NOT_EXIST);
         }

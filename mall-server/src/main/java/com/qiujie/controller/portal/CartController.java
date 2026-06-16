@@ -5,7 +5,6 @@ import com.qiujie.dto.ResponseDTO;
 import com.qiujie.entity.Cart;
 import com.qiujie.service.CartService;
 import cn.dev33.satoken.stp.StpUtil;
-import com.qiujie.vo.CartVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -27,7 +26,7 @@ public class CartController {
 
     @Operation(summary = "购物车列表")
     @GetMapping("/list")
-    public ResponseDTO<List<CartVO>> list() {
+    public ResponseDTO<List<Cart>> list() {
         return Response.success(cartService.list(StpUtil.getLoginIdAsInt()));
     }
 

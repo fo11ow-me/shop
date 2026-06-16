@@ -8,7 +8,6 @@ import com.qiujie.exception.ServiceException;
 import com.qiujie.mapper.CartMapper;
 import com.qiujie.mapper.ProductMapper;
 import com.qiujie.service.CartService;
-import com.qiujie.vo.CartVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +25,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         this.productMapper = productMapper;
     }
 
-    public List<CartVO> list(Integer userId) {
+    public List<Cart> list(Integer userId) {
         return cartMapper.selectByUserId(userId);
     }
 
@@ -43,6 +42,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
             return;
         }
         cart.setUserId(userId);
+        cart.setIsSelected(1);
         if (cart.getAmount() == null || cart.getAmount() < 1) {
             cart.setAmount(1);
         }

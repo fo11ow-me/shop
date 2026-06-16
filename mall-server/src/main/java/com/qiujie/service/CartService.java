@@ -2,14 +2,13 @@ package com.qiujie.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.qiujie.entity.Cart;
-import com.qiujie.vo.CartVO;
 
 import java.util.List;
 import java.util.Map;
 
 public interface CartService extends IService<Cart> {
 
-    List<CartVO> list(Integer userId);
+    List<Cart> list(Integer userId);
 
     void add(Integer userId, Cart cart);
 

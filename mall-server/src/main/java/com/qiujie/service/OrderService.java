@@ -3,7 +3,6 @@ package com.qiujie.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.qiujie.entity.Order;
-import com.qiujie.vo.OrderVO;
 
 import java.util.List;
 import java.util.Map;
@@ -16,18 +15,18 @@ public interface OrderService extends IService<Order> {
 
     void pay(Integer userId, Integer id, Integer payMethod);
 
-    List<OrderVO> list(Integer userId);
+    List<Order> list(Integer userId);
 
-    List<OrderVO> listByStatus(Integer userId, Integer status);
+    List<Order> listByStatus(Integer userId, Integer status);
 
-    OrderVO detail(Integer userId, Integer id);
+    Order detail(Integer userId, Integer id);
 
     void delete(Integer userId, Integer id);
 
-    IPage<OrderVO> list(Integer current, Integer size, String orderSn, String userName, String status,
+    IPage<Order> list(Integer current, Integer size, String orderSn, String userName, String status,
                         String startTime, String endTime);
 
-    OrderVO detail(Integer id);
+    Order detail(Integer id);
 
     void deliver(Integer id);
 

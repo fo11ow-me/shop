@@ -4,8 +4,8 @@ import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.qiujie.dto.Response;
 import com.qiujie.dto.ResponseDTO;
+import com.qiujie.entity.Order;
 import com.qiujie.service.OrderService;
-import com.qiujie.vo.OrderVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +26,7 @@ public class OrderController {
 
     @Operation(summary = "分页条件查询订单列表")
     @GetMapping("/list")
-    public ResponseDTO<IPage<OrderVO>> list(@RequestParam(defaultValue = "1") Integer current,
+    public ResponseDTO<IPage<Order>> list(@RequestParam(defaultValue = "1") Integer current,
                                              @RequestParam(defaultValue = "10") Integer size,
                                              String orderSn, String userName, String status,
                                              String startTime, String endTime) {
@@ -35,7 +35,7 @@ public class OrderController {
 
     @Operation(summary = "订单详情")
     @GetMapping("/detail/{id}")
-    public ResponseDTO<OrderVO> detail(@PathVariable Integer id) {
+    public ResponseDTO<Order> detail(@PathVariable Integer id) {
         return Response.success(orderService.detail(id));
     }
 
