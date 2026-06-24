@@ -7,12 +7,23 @@
       <el-table :data="tableData" border v-loading="loading">
         <template #empty><el-empty description="暂无秒杀场次" /></template>
         <el-table-column prop="id" label="ID" width="70" align="center" />
-        <el-table-column prop="productId" label="商品ID" width="90" align="center" />
+        <el-table-column label="商品" min-width="200" align="center">
+          <template #default="{row}">
+            <div style="display:flex;align-items:center;gap:10px">
+              <el-image v-if="row.productImg" :src="adminImgUrl(row.productImg)" style="width:48px;height:48px;border-radius:6px;flex-shrink:0" fit="cover" />
+              <span v-else style="width:48px;height:48px;border-radius:6px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px;color:#ccc">{{ row.productName?.charAt(0) }}</span>
+              <span>{{ row.productName || '-' }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="productPrice" label="原价" width="90" align="center">
+          <template #default="{row}">￥{{ row.productPrice }}</template>
+        </el-table-column>
         <el-table-column prop="seckillPrice" label="秒杀价" width="100" align="center">
           <template #default="{row}">￥{{ row.seckillPrice }}</template>
         </el-table-column>
         <el-table-column prop="seckillStock" label="库存" width="80" align="center" />
-        <el-table-column label="时间" min-width="280" align="center">
+        <el-table-column label="时间" min-width="260" align="center">
           <template #default="{row}">{{ row.startTime }} ~ {{ row.endTime }}</template>
         </el-table-column>
         <el-table-column label="状态" width="100" align="center">
@@ -36,11 +47,21 @@
     <!-- 新建/编辑弹窗 -->
     <el-dialog :title="isEdit ? '编辑秒杀' : '新建秒杀'" v-model="dialogVisible" width="480px" destroy-on-close>
       <el-form :model="form" label-width="80px">
-        <el-form-item label="商品ID" required>
-          <el-input-number v-model="form.productId" :min="1" />
+        <el-form-item label="商品" required>
+          <el-select v-model="form.productId" filterable placeholder="搜索并选择商品" style="width:100%">
+            <el-option v-for="p in productOptions" :key="p.id" :label="p.name" :value="p.id">
+              <div style="display:flex;align-items:center;gap:8px">
+                <el-image v-if="p.image" :src="adminImgUrl(p.image)" style="width:32px;height:32px;border-radius:4px;flex-shrink:0" fit="cover" />
+                <span v-else style="width:32px;height:32px;border-radius:4px;background:#f5f5f5;display:inline-flex;align-items:center;justify-content:center;font-size:14px;color:#ccc;flex-shrink:0">{{ p.name?.charAt(0) }}</span>
+                <span>{{ p.name }}</span>
+                <span style="color:#999;margin-left:auto">￥{{ p.price }}</span>
+              </div>
+            </el-option>
+          </el-select>
         </el-form-item>
         <el-form-item label="秒杀价" required>
-          <el-input-number v-model="form.seckillPrice" :min="0.01" :precision="2" />
+          <el-input-number v-model="form.seckillPrice" :min="0.01" :precision="2"
+            :max="selectedProduct ? selectedProduct.price - 0.01 : undefined" />
         </el-form-item>
         <el-form-item label="库存" required>
           <el-input-number v-model="form.seckillStock" :min="1" />
@@ -61,7 +82,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import request from '@/utils/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -70,8 +91,13 @@ const total = ref(0)
 const loading = ref(false)
 const dialogVisible = ref(false)
 const isEdit = ref(false)
+const productOptions = ref([])
 const query = reactive({ current: 1, size: 10 })
 const form = reactive({ productId: null, seckillPrice: null, seckillStock: null, startTime: '', endTime: '' })
+
+const adminImgUrl = (key) => `/admin-api/product/img?key=${key}`
+
+const selectedProduct = computed(() => productOptions.value.find(p => p.id === form.productId) || null)
 
 const statusTag = (row) => {
   const now = new Date()
@@ -89,6 +115,13 @@ const fetchData = async () => {
     tableData.value = res.data.records || []
     total.value = res.data.total || 0
   } finally { loading.value = false }
+}
+
+const fetchProductOptions = async () => {
+  try {
+    const res = await request.get('/seckill/product-options')
+    productOptions.value = res.data || []
+  } catch {}
 }
 
 const handleAdd = () => {
@@ -129,7 +162,7 @@ const handleDelete = async (id) => {
   } catch {}
 }
 
-onMounted(fetchData)
+onMounted(() => { fetchData(); fetchProductOptions() })
 </script>
 
 <style scoped>

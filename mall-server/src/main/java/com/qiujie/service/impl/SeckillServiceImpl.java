@@ -213,7 +213,30 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
                 wrapper.lt("end_time", now);
             }
         }
+        if (wrapper == null) {
+            wrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            wrapper.orderByDesc("create_time");
+        } else {
+            wrapper.orderByDesc("create_time");
+        }
         IPage<SeckillSession> result = seckillSessionMapper.selectPage(page, wrapper);
+
+        List<SeckillSession> sessions = result.getRecords();
+        Map<Integer, Product> productMap = batchProducts(sessions);
+        Map<Integer, ProductImg> imgMap = batchProductImages(sessions);
+
+        for (SeckillSession session : sessions) {
+            Product product = productMap.get(session.getProductId());
+            if (product != null) {
+                session.setProductName(product.getName());
+                session.setProductPrice(product.getPrice());
+            }
+            ProductImg img = imgMap.get(session.getProductId());
+            if (img != null) {
+                session.setProductImg(img.getUrl());
+            }
+        }
+
         Map<String, Object> data = new HashMap<>();
         data.put("records", result.getRecords());
         data.put("total", result.getTotal());
@@ -253,6 +276,11 @@ public class SeckillServiceImpl extends ServiceImpl<SeckillSessionMapper, Seckil
         }
         if (!session.getEndTime().isAfter(session.getStartTime())) {
             throw new ServiceException(BusinessStatusEnum.PARAM_ERROR.getCode(), "结束时间必须晚于开始时间");
+        }
+        Product product = productMapper.selectById(session.getProductId());
+        if (product != null && session.getSeckillPrice() != null
+                && session.getSeckillPrice().compareTo(product.getPrice()) >= 0) {
+            throw new ServiceException(BusinessStatusEnum.PARAM_ERROR.getCode(), "秒杀价必须低于商品原价");
         }
         seckillSessionMapper.updateById(session);
         // 同步缓存
