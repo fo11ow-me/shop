@@ -145,6 +145,7 @@ import { getImageUrl } from '../api'
 
 const ORDER_TIMEOUT_MS = 10 * 60 * 1000
 const now = ref(Date.now())
+const pageLoadTime = Date.now()
 const cancelPending = new Set()
 let countdownTimer = null
 
@@ -165,7 +166,8 @@ onMounted(() => {
     now.value = Date.now()
     allOrders.value.forEach(order => {
       if (order.status !== 0 || cancelPending.has(order.id)) return
-      if (remainingSeconds(order) <= 0) {
+      const deadline = new Date(order.createTime).getTime() + ORDER_TIMEOUT_MS
+      if (deadline > pageLoadTime && deadline <= Date.now()) {
         cancelPending.add(order.id)
         cancelOrder(order.id).then(() => {
           ElMessage.warning('订单支付超时，已自动取消')
@@ -223,6 +225,16 @@ const load = async () => {
     allOrders.value.forEach(order => {
       if (order.status === 0 && orderDelivery[order.id] === undefined) {
         orderDelivery[order.id] = order.expressDelivery || 0
+      }
+    })
+    // 页面加载时清理已超时的未支付订单（后端超时监听器为权威取消机制，此处为兜底）
+    const now = Date.now()
+    allOrders.value.forEach(order => {
+      if (order.status !== 0 || cancelPending.has(order.id)) return
+      const deadline = new Date(order.createTime).getTime() + ORDER_TIMEOUT_MS
+      if (deadline <= now) {
+        cancelPending.add(order.id)
+        cancelOrder(order.id).then(() => load()).catch(() => cancelPending.delete(order.id))
       }
     })
   } catch { ElMessage.error('加载订单失败') }

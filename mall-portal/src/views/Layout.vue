@@ -9,7 +9,7 @@
 
         <div class="header-actions">
           <form @submit.prevent="doSearch" class="search-form">
-            <el-input v-model="keyword" placeholder="搜索商品..." size="small" class="search-input"
+            <el-input ref="searchInputRef" v-model="keyword" placeholder="搜索商品..." size="small" class="search-input"
               @keyup.enter="doSearch" clearable />
             <button type="submit" class="search-btn">
               <el-icon><Search /></el-icon>
@@ -92,6 +92,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { Search, ShoppingCart } from '@element-plus/icons-vue'
 
 
@@ -108,6 +109,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const userStore = useUserStore()
+const searchInputRef = ref(null)
 const keyword = ref('')
 const isSticky = ref(false)
 const hoverCat = ref(null)
@@ -130,9 +132,12 @@ const isCatActive = (catId) => {
 }
 
 const doSearch = () => {
-  if (keyword.value.trim()) {
-    router.push({ name: 'Search', query: { keyword: keyword.value.trim() } })
+  if (!keyword.value.trim()) {
+    ElMessage.warning('请输入搜索关键词')
+    searchInputRef.value?.focus()
+    return
   }
+  router.push({ name: 'Search', query: { keyword: keyword.value.trim() } })
 }
 
 const handleLogout = () => {

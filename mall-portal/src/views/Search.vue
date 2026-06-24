@@ -18,7 +18,7 @@
 
     <div v-else class="product-grid">
       <ProductCard v-for="p in products" :key="p.id"
-        :product="p" :image-key="productImages[p.id] || ''" />
+        :product="p" :image-key="productImages[p.id] || p.image || ''" />
     </div>
 
     <div v-if="total > size" style="text-align:center;margin-top:32px">
