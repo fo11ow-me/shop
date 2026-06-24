@@ -1,423 +1,292 @@
--- ===============================================
--- mall 商城数据库初始化脚本
--- 用途: 首次部署或重建数据库时执行
--- 兼容: MySQL 8.0+
--- ===============================================
+-- MySQL dump 10.13  Distrib 8.0.46, for Linux (x86_64)
+--
+-- Host: localhost    Database: mall
+-- ------------------------------------------------------
+-- Server version	8.0.46
 
-SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
--- ===============================================
--- 1. 清理废弃的权限关联表（已简化为 sys_user.role 字段）
--- ===============================================
-DROP TABLE IF EXISTS per_role_menu;
-DROP TABLE IF EXISTS per_user_role;
-DROP TABLE IF EXISTS per_menu;
-DROP TABLE IF EXISTS per_role;
+--
+-- Table structure for table `oms_cart`
+--
 
--- ===============================================
--- 2. 核心表
--- ===============================================
+DROP TABLE IF EXISTS `oms_cart`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `oms_cart` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `amount` int DEFAULT '1',
+  `is_selected` int DEFAULT '0',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` int DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- 系统用户表
-CREATE TABLE IF NOT EXISTS `sys_user` (
-    `id`          INT UNSIGNED    NOT NULL AUTO_INCREMENT  COMMENT '用户ID',
-    `code`        VARCHAR(20)     DEFAULT ''               COMMENT '用户编码',
-    `name`        VARCHAR(20)     NOT NULL DEFAULT ''      COMMENT '用户姓名',
-    `gender`      TINYINT UNSIGNED DEFAULT 0               COMMENT '性别(0=男,1=女)',
-    `pwd`         CHAR(60)        DEFAULT NULL             COMMENT '密码(BCrypt)',
-    `avatar`      VARCHAR(50)     DEFAULT NULL             COMMENT '头像',
-    `birthday`    DATE            DEFAULT NULL             COMMENT '生日',
-    `phone`       CHAR(11)        DEFAULT NULL             COMMENT '电话',
-    `email`       VARCHAR(100)    DEFAULT NULL             COMMENT '邮箱',
-    `address`     VARCHAR(200)    DEFAULT NULL             COMMENT '地址',
-    `remark`      VARCHAR(200)    DEFAULT NULL             COMMENT '备注',
-    `role`        INT             DEFAULT 0                COMMENT '角色(0=用户,1=管理员)',
-    `status`      TINYINT UNSIGNED NOT NULL DEFAULT 1      COMMENT '状态(0=禁用,1=启用)',
-    `create_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP  COMMENT '创建时间',
-    `update_time` DATETIME        DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    `is_deleted`  TINYINT UNSIGNED NOT NULL DEFAULT 0      COMMENT '逻辑删除(0=未删,1=已删)',
-    PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='系统用户表';
+--
+-- Dumping data for table `oms_cart`
+--
 
--- ===============================================
--- 3. 商品相关表
--- ===============================================
+LOCK TABLES `oms_cart` WRITE;
+/*!40000 ALTER TABLE `oms_cart` DISABLE KEYS */;
+INSERT INTO `oms_cart` VALUES (2,2,8,1,1,'2026-06-08 06:19:11','2026-06-08 06:19:11',0),(3,3,1,3,1,'2026-06-15 06:08:45','2026-06-15 06:08:45',0);
+/*!40000 ALTER TABLE `oms_cart` ENABLE KEYS */;
+UNLOCK TABLES;
 
--- 商品分类表
-CREATE TABLE IF NOT EXISTS `pms_category` (
-    `id`          INT             NOT NULL AUTO_INCREMENT  COMMENT '分类ID',
-    `name`        VARCHAR(30)     NOT NULL                 COMMENT '分类名称',
-    `parent_id`   INT             DEFAULT 0                COMMENT '父分类ID(0=一级分类)',
-    `create_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP  COMMENT '创建时间',
-    `update_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-    `is_deleted`  TINYINT         NOT NULL DEFAULT 0       COMMENT '逻辑删除',
-    PRIMARY KEY (`id`),
-    KEY `idx_parent_id` (`parent_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商品分类表';
+--
+-- Table structure for table `oms_order`
+--
 
--- 商品表
-CREATE TABLE IF NOT EXISTS `pms_product` (
-    `id`          INT             NOT NULL AUTO_INCREMENT  COMMENT '商品ID',
-    `name`        VARCHAR(30)     NOT NULL                 COMMENT '商品名称',
-    `price`       DECIMAL(10,2)   DEFAULT 0.00             COMMENT '价格',
-    `stock`       INT             DEFAULT 0                COMMENT '库存',
-    `category_id` INT             DEFAULT NULL             COMMENT '分类ID',
-    `detail`      VARCHAR(100)    DEFAULT NULL             COMMENT '商品详情',
-    `status`      INT             DEFAULT 1                COMMENT '状态(0=下架,1=上架)',
-    `version`     INT             NOT NULL DEFAULT 0       COMMENT '乐观锁版本号',
-    `create_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP  COMMENT '创建时间',
-    `update_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-    `is_deleted`  TINYINT         NOT NULL DEFAULT 0       COMMENT '逻辑删除',
-    PRIMARY KEY (`id`),
-    KEY `idx_category_id` (`category_id`),
-    KEY `idx_name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商品表';
+DROP TABLE IF EXISTS `oms_order`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `oms_order` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `seckill_session_id` int DEFAULT NULL COMMENT 'ç§’æ€åœºæ¬¡ID',
+  `address_id` int DEFAULT NULL COMMENT 'æ”¶è´§åœ°å€ID',
+  `order_sn` varchar(64) NOT NULL,
+  `payment_sn` varchar(64) DEFAULT '',
+  `total_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `pay_method` int DEFAULT '0',
+  `express_delivery` tinyint DEFAULT '0' COMMENT 'å¿«é€’(0=é¡ºä¸°,1=ç™¾ä¸–,2=åœ†é€š,3=ä¸­é€š)',
+  `status` int DEFAULT '0',
+  `recipient_name` varchar(32) DEFAULT '',
+  `recipient_phone` varchar(20) DEFAULT '',
+  `recipient_address` varchar(255) DEFAULT '',
+  `payment_time` datetime DEFAULT NULL,
+  `delivery_time` datetime DEFAULT NULL,
+  `receipt_time` datetime DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` int DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_seckill` (`user_id`,`seckill_session_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- 商品图片表
-CREATE TABLE IF NOT EXISTS `pms_product_img` (
-    `id`          INT             NOT NULL AUTO_INCREMENT  COMMENT '图片ID',
-    `url`         VARCHAR(255)    NOT NULL                 COMMENT '图片OSS key',
-    `product_id`  INT             NOT NULL                 COMMENT '商品ID',
-    `create_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP  COMMENT '创建时间',
-    `update_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-    `is_deleted`  TINYINT         NOT NULL DEFAULT 0       COMMENT '逻辑删除',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_product_url` (`product_id`, `url`),
-    KEY `idx_product_id` (`product_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商品图片表';
+--
+-- Dumping data for table `oms_order`
+--
 
--- ===============================================
--- 4. 订单与购物车
--- ===============================================
+LOCK TABLES `oms_order` WRITE;
+/*!40000 ALTER TABLE `oms_order` DISABLE KEYS */;
+INSERT INTO `oms_order` VALUES (9,1,NULL,NULL,'2026061514355116863488','PAY17815053707007650',89.00,0,0,1,'','','','2026-06-15 14:36:11',NULL,NULL,'2026-06-15 06:35:51','2026-06-15 06:36:11',1),(10,1,NULL,NULL,'2026061514415004870912','PAY17815057108203216',89.00,0,0,1,'','','','2026-06-15 14:41:51',NULL,NULL,'2026-06-15 06:41:50','2026-06-15 06:41:50',0);
+/*!40000 ALTER TABLE `oms_order` ENABLE KEYS */;
+UNLOCK TABLES;
 
--- 购物车表
-CREATE TABLE IF NOT EXISTS `oms_cart` (
-    `id`          INT             NOT NULL AUTO_INCREMENT  COMMENT '购物车ID',
-    `user_id`     INT             DEFAULT NULL             COMMENT '用户ID',
-    `product_id`  INT             DEFAULT NULL             COMMENT '商品ID',
-    `amount`      INT             DEFAULT 0                COMMENT '数量',
-    `is_selected` TINYINT         DEFAULT 1                COMMENT '是否选中(0=否,1=是)',
-    `create_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP  COMMENT '创建时间',
-    `update_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-    PRIMARY KEY (`id`),
-    KEY `idx_user_id` (`user_id`),
-    KEY `idx_product_id` (`product_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='购物车表';
+--
+-- Table structure for table `oms_order_item`
+--
 
--- 订单表
-CREATE TABLE IF NOT EXISTS `oms_order` (
-    `id`                 INT             NOT NULL AUTO_INCREMENT  COMMENT '订单ID',
-    `user_id`            INT             DEFAULT NULL             COMMENT '用户ID',
-    `address_id`         INT             DEFAULT NULL             COMMENT '收货地址ID',
-    `order_sn`           VARCHAR(30)     DEFAULT NULL             COMMENT '订单编号',
-    `payment_sn`         VARCHAR(32)     DEFAULT ''               COMMENT '支付流水号',
-    `total_amount`       DECIMAL(10,2)   DEFAULT 0.00             COMMENT '总金额',
-    `create_time`        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP  COMMENT '创建时间',
-    `update_time`        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-    `pay_method`         TINYINT         DEFAULT 0                COMMENT '支付方式(0=支付宝,1=微信,2=银联,3=货到付款)',
-    `express_delivery`   TINYINT         DEFAULT 0                COMMENT '快递(0=顺丰,1=百世,2=圆通,3=中通)',
-    `status`             TINYINT         DEFAULT 0                COMMENT '状态(0=待支付,1=已支付,2=库存不足)',
-    `recipient_name`     VARCHAR(32)     DEFAULT ''               COMMENT '收件人',
-    `recipient_phone`    VARCHAR(20)     DEFAULT ''               COMMENT '收件人电话',
-    `recipient_address`  VARCHAR(255)    DEFAULT ''               COMMENT '收件地址',
-    `payment_time`       DATETIME        DEFAULT NULL             COMMENT '支付时间',
-    `delivery_time`      DATETIME        DEFAULT NULL             COMMENT '发货时间',
-    `receipt_time`       DATETIME        DEFAULT NULL             COMMENT '收货时间',
-    `is_deleted`         TINYINT         NOT NULL DEFAULT 0       COMMENT '逻辑删除',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_order_sn` (`order_sn`),
-    KEY `idx_user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单表';
+DROP TABLE IF EXISTS `oms_order_item`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `oms_order_item` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `order_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `product_name` varchar(128) NOT NULL,
+  `product_img` varchar(512) DEFAULT '',
+  `product_price` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `amount` int DEFAULT '1',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'ä¿®æ”¹æ—¶é—´',
+  `is_deleted` int DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-ALTER TABLE `oms_order` ADD COLUMN `seckill_session_id` INT DEFAULT NULL COMMENT '秒杀场次ID' AFTER `user_id`;
-ALTER TABLE `oms_order` ADD UNIQUE KEY `uk_user_seckill` (`user_id`, `seckill_session_id`);
+--
+-- Dumping data for table `oms_order_item`
+--
 
--- 订单明细表
-CREATE TABLE IF NOT EXISTS `oms_order_item` (
-    `id`            INT             NOT NULL AUTO_INCREMENT  COMMENT '明细ID',
-    `order_id`      INT             DEFAULT NULL             COMMENT '订单ID',
-    `product_id`    INT             DEFAULT NULL             COMMENT '商品ID',
-    `product_name`  VARCHAR(100)    DEFAULT NULL             COMMENT '商品名称',
-    `product_price` DECIMAL(10,2)   DEFAULT 0.00             COMMENT '商品价格',
-    `product_img`   VARCHAR(500)    DEFAULT NULL             COMMENT '商品图片',
-    `amount`        INT             NOT NULL DEFAULT 0       COMMENT '数量',
-    `create_time`   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP  COMMENT '创建时间',
-    `update_time`   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-    `is_deleted`    TINYINT         NOT NULL DEFAULT 0       COMMENT '逻辑删除',
-    PRIMARY KEY (`id`),
-    KEY `idx_order_id` (`order_id`),
-    KEY `idx_product_id` (`product_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单明细表';
+LOCK TABLES `oms_order_item` WRITE;
+/*!40000 ALTER TABLE `oms_order_item` DISABLE KEYS */;
+INSERT INTO `oms_order_item` VALUES (9,9,1,'绿植花束装饰','0f73c1cf-10ba-44e2-b8c5-4f5f7366d894.jpg',89.00,1,'2026-06-15 06:35:52','2026-06-15 06:35:52',0),(10,10,1,'绿植花束装饰','0f73c1cf-10ba-44e2-b8c5-4f5f7366d894.jpg',89.00,1,'2026-06-15 06:41:50','2026-06-15 06:41:50',0);
+/*!40000 ALTER TABLE `oms_order_item` ENABLE KEYS */;
+UNLOCK TABLES;
 
--- ===============================================
--- 5. 支付表
--- ===============================================
+--
+-- Table structure for table `pms_category`
+--
 
-CREATE TABLE IF NOT EXISTS `pay_payment` (
-    `id`             INT             NOT NULL AUTO_INCREMENT  COMMENT '支付ID',
-    `order_id`       INT             DEFAULT NULL             COMMENT '订单ID',
-    `pay_sn`         VARCHAR(30)     DEFAULT NULL             COMMENT '支付流水号',
-    `amount`         DECIMAL(10,2)   DEFAULT NULL             COMMENT '支付金额',
-    `method`         TINYINT         DEFAULT 0                COMMENT '支付方式(0=支付宝,1=微信)',
-    `status`         TINYINT         DEFAULT 0                COMMENT '状态(0=待支付,1=已支付)',
-    `transaction_id` VARCHAR(64)     DEFAULT NULL             COMMENT '第三方交易号',
-    `code_url`       VARCHAR(255)    DEFAULT NULL             COMMENT '微信扫码链接',
-    `create_time`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP  COMMENT '创建时间',
-    `update_time`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-    `is_deleted`     TINYINT         NOT NULL DEFAULT 0       COMMENT '逻辑删除',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_pay_sn` (`pay_sn`),
-    KEY `idx_order_id` (`order_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='支付表';
+DROP TABLE IF EXISTS `pms_category`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `pms_category` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `parent_id` int DEFAULT '0',
+  `name` varchar(64) NOT NULL,
+  `sort` int DEFAULT '0',
+  `icon` varchar(255) DEFAULT '',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` int DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- ===============================================
--- 6. 秒杀相关表
--- ===============================================
+--
+-- Dumping data for table `pms_category`
+--
 
--- 秒杀场次表
-CREATE TABLE IF NOT EXISTS `sms_seckill_session` (
-    `id`          INT             NOT NULL AUTO_INCREMENT  COMMENT '场次ID',
-    `product_id`  INT             NOT NULL                 COMMENT '商品ID',
-    `seckill_price` DECIMAL(10,2) NOT NULL                 COMMENT '秒杀价',
-    `seckill_stock` INT           NOT NULL                 COMMENT '秒杀库存',
-    `start_time`  DATETIME        NOT NULL                 COMMENT '开始时间',
-    `end_time`    DATETIME        NOT NULL                 COMMENT '结束时间',
-    `version`     INT             NOT NULL DEFAULT 0       COMMENT '乐观锁版本号',
-    `create_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP  COMMENT '创建时间',
-    `update_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-    `is_deleted`  TINYINT         NOT NULL DEFAULT 0       COMMENT '逻辑删除',
-    PRIMARY KEY (`id`),
-    KEY `idx_start_end` (`start_time`, `end_time`),
-    KEY `idx_product_id` (`product_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='秒杀场次表';
+LOCK TABLES `pms_category` WRITE;
+/*!40000 ALTER TABLE `pms_category` DISABLE KEYS */;
+INSERT INTO `pms_category` VALUES (1,0,'仿真花/干花',1,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(2,0,'花瓶花器',2,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(3,0,'靠垫抱枕',3,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(4,0,'桌布家纺',4,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(5,0,'家居摆件',5,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(6,0,'香薰用品',6,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(7,0,'置物收纳',7,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(8,0,'装饰壁饰',8,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(9,0,'杯具餐具',9,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(10,0,'创意家居',10,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(11,1,'绿植花束',1,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(12,1,'仿真兰花',2,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(13,1,'牡丹仿真花',3,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(14,2,'陶瓷花瓶',4,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(15,2,'素烧花器',5,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(16,3,'三角靠垫',6,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(17,3,'纯色抱枕',7,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(18,4,'棉麻桌布',8,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(19,4,'条纹餐桌布',9,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(20,5,'驯鹿摆件',10,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(21,5,'波点苹果',11,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(22,6,'香薰机',12,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(23,6,'铜香炉',13,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(24,7,'壁挂置物架',14,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(25,7,'铁艺置物架',15,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(26,8,'立体装饰画',16,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(27,8,'山水壁饰',17,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(28,9,'玻璃杯套装',18,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(29,9,'碗碟套装',19,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0),(30,10,'铁艺小圆桌',20,'','2026-06-08 05:28:41','2026-06-08 06:07:08',0);
+/*!40000 ALTER TABLE `pms_category` ENABLE KEYS */;
+UNLOCK TABLES;
 
--- 秒杀订单表
-CREATE TABLE IF NOT EXISTS `sms_seckill_order` (
-    `id`          INT             NOT NULL AUTO_INCREMENT  COMMENT '秒杀订单ID',
-    `user_id`     INT             NOT NULL                 COMMENT '用户ID',
-    `session_id`  INT             NOT NULL                 COMMENT '场次ID',
-    `product_id`  INT             NOT NULL                 COMMENT '商品ID',
-    `order_id`    INT             DEFAULT NULL             COMMENT '关联订单ID',
-    `status`      TINYINT         NOT NULL DEFAULT 0       COMMENT '状态(0=排队中,1=成功,2=已取消)',
-    `create_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP  COMMENT '创建时间',
-    `update_time` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-    `is_deleted`  TINYINT         NOT NULL DEFAULT 0       COMMENT '逻辑删除',
-    PRIMARY KEY (`id`),
-    KEY `idx_user_session` (`user_id`, `session_id`),
-    KEY `idx_session_id` (`session_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='秒杀订单表';
+--
+-- Table structure for table `pms_product`
+--
 
-ALTER TABLE `pms_product` ADD INDEX `idx_update_time` (`update_time`);
-ALTER TABLE `sms_seckill_session` ADD INDEX `idx_start_end` (`start_time`, `end_time`);
+DROP TABLE IF EXISTS `pms_product`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `pms_product` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(128) NOT NULL,
+  `price` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `stock` int DEFAULT '0',
+  `detail` text,
+  `category_id` int DEFAULT '0',
+  `status` int DEFAULT '1',
+  `version` int DEFAULT '1',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` int DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-CREATE TABLE IF NOT EXISTS `reconcile_log` (
-    `id`           BIGINT          NOT NULL                COMMENT '雪花算法主键',
-    `seckill_id`   INT             NOT NULL                COMMENT '秒杀场次ID',
-    `user_id`      INT             NOT NULL                COMMENT '用户ID',
-    `operation`    VARCHAR(20)     NOT NULL                COMMENT '操作类型：DEDUCT/ROLLBACK',
-    `stock_before` INT             DEFAULT NULL            COMMENT '变更前库存',
-    `stock_after`  INT             DEFAULT NULL            COMMENT '变更后库存',
-    `create_time`  DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    PRIMARY KEY (`id`),
-    KEY `idx_seckill_id` (`seckill_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='秒杀库存对账日志';
+--
+-- Dumping data for table `pms_product`
+--
 
--- ===============================================
--- 7. 种子数据
--- ===============================================
+LOCK TABLES `pms_product` WRITE;
+/*!40000 ALTER TABLE `pms_product` DISABLE KEYS */;
+INSERT INTO `pms_product` VALUES (1,'绿植花束装饰',89.00,98,'清新绿植花束，为家居增添自然气息',11,1,1,'2026-06-08 05:29:30','2026-06-15 06:41:50',0),(2,'仿真兰花盆栽',128.00,80,'高仿真兰花，优雅绽放四季如春',12,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(3,'牡丹仿真花摆件',158.00,60,'富贵牡丹仿真花，客厅卧室皆宜',13,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(4,'仿真马蹄莲插花',99.00,120,'马蹄莲仿真插花，简约现代风格',11,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(5,'仿真文心兰花艺',119.00,90,'文心兰仿真花艺，温馨浪漫',11,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(6,'干花束装饰',59.00,150,'自然干花束，持久保存',11,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(7,'仿真花摆件套装',139.00,70,'多款仿真花组合，一摆即美',11,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(8,'北欧风陶瓷花瓶',79.00,50,'简约北欧设计，哑光釉面',14,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(9,'素烧花器花瓶',69.00,50,'素烧工艺，质朴自然',15,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(10,'壁挂花器',89.00,50,'创意壁挂，节省空间',14,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(11,'哆啦A梦三角靠垫',99.00,80,'可爱造型，舒适支撑',16,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(12,'ins风纯色抱枕',59.00,100,'简约纯色，百搭家居',17,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(13,'装饰花卉抱枕',69.00,90,'花卉图案，点缀沙发',17,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(14,'蕾丝边棉麻桌布',89.00,60,'精致蕾丝边，优雅餐桌',18,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(15,'条纹餐桌布',79.00,70,'经典条纹，简约大方',19,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(16,'格子图案桌布',69.00,80,'田园风格，温馨用餐',18,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(17,'民族风印花桌布',99.00,50,'民族风图案，个性装饰',18,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(18,'情侣驯鹿摆件',129.00,40,'可爱驯鹿，甜蜜装饰',20,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(19,'波点苹果摆件',89.00,60,'波点设计，趣味苹果造型',21,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(20,'水手造型摆件',108.00,45,'水手风格，航海主题',20,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(21,'鱼形装饰摆件',79.00,70,'创意鱼形，海洋风情',20,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(22,'大象吉祥摆件',138.00,35,'吉祥大象，招财纳福',20,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(23,'超声波香薰机',159.00,30,'静音加湿，香薰氛围',22,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(24,'复古铜香炉',189.00,25,'复古铜制，禅意生活',23,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(25,'简约壁挂置物架',59.00,80,'壁挂收纳，节省空间',24,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(26,'创意铁艺置物架',139.00,40,'铁艺设计，工业风格',25,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(27,'自行车立体装饰画',128.00,35,'立体效果，创意墙面',26,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(28,'铁艺山水壁饰',168.00,30,'铁艺山水，中式韵味',27,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(29,'动物系列装饰画',89.00,50,'可爱动物，童趣装饰',26,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(30,'孔雀挂钟照片墙',199.00,20,'孔雀造型，实用装饰',26,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(31,'ins风玻璃杯套装',69.00,100,'简约玻璃杯，夏日清凉',28,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(32,'日式玻璃碗碟套装',159.00,40,'日式风格，精致餐具',29,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(33,'欧式铁艺小圆桌',358.00,15,'欧式铁艺，阳台小桌',30,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(34,'克鲁克斯辐射计',139.00,25,'物理原理，科技装饰',30,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0),(35,'狗狗造型书挡',99.00,60,'可爱狗狗，实用书挡',30,1,1,'2026-06-08 05:29:30','2026-06-08 06:07:08',0);
+/*!40000 ALTER TABLE `pms_product` ENABLE KEYS */;
+UNLOCK TABLES;
 
--- 管理员账号（用户名: admin, 密码: 123）
-INSERT INTO `sys_user` (`id`, `code`, `name`, `gender`, `pwd`, `avatar`, `birthday`, `phone`, `email`, `address`, `remark`, `role`, `status`, `create_time`, `update_time`, `is_deleted`) VALUES
-(1, 'admin', '管理员', 0, '$2a$10$Nwice5e9Sqt34HBz/VpBkumMtP5NJdDZFFPjsuulo2PIHZNHY19em', '613877ab0e79497eba980767073cadb7.jpg', '2000-12-06', '13900000000', 'admin@mall.com', '', '', 1, 1, '2022-01-22 19:46:27', NULL, 0)
-ON DUPLICATE KEY UPDATE `id`=`id`;
+--
+-- Table structure for table `pms_product_img`
+--
 
--- 一级分类
-INSERT INTO `pms_category` (`id`, `name`, `parent_id`, `create_time`) VALUES
-(1, '仿真花/干花', 0, NOW()),
-(2, '花瓶花器', 0, NOW()),
-(3, '靠垫抱枕', 0, NOW()),
-(4, '桌布家纺', 0, NOW()),
-(5, '家居摆件', 0, NOW()),
-(6, '香薰用品', 0, NOW()),
-(7, '置物收纳', 0, NOW()),
-(8, '装饰壁饰', 0, NOW()),
-(9, '杯具餐具', 0, NOW()),
-(10, '创意家居', 0, NOW())
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
+DROP TABLE IF EXISTS `pms_product_img`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `pms_product_img` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `product_id` int NOT NULL,
+  `url` varchar(512) NOT NULL,
+  `sort` int DEFAULT '0',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `is_deleted` int DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- 二级分类
-INSERT INTO `pms_category` (`id`, `name`, `parent_id`, `create_time`) VALUES
-(11, '仿真花', 1, NOW()),
-(12, '干花束', 1, NOW()),
-(21, '陶瓷花瓶', 2, NOW()),
-(22, '花器', 2, NOW()),
-(31, '三角靠垫', 3, NOW()),
-(32, '方形抱枕', 3, NOW()),
-(41, '餐桌布', 4, NOW()),
-(42, '装饰桌布', 4, NOW()),
-(51, '动物摆件', 5, NOW()),
-(52, '人物摆件', 5, NOW()),
-(53, '创意摆件', 5, NOW()),
-(61, '香薰机', 6, NOW()),
-(62, '香炉', 6, NOW()),
-(71, '壁挂置物架', 7, NOW()),
-(72, '桌面置物架', 7, NOW()),
-(81, '装饰画', 8, NOW()),
-(82, '铁艺壁饰', 8, NOW()),
-(91, '玻璃杯', 9, NOW()),
-(92, '碗碟套装', 9, NOW()),
-(101, '小家具', 10, NOW()),
-(102, '创意文具', 10, NOW())
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
+--
+-- Dumping data for table `pms_product_img`
+--
 
--- 商品数据
-INSERT INTO `pms_product` (`id`, `name`, `price`, `stock`, `category_id`, `detail`, `create_time`) VALUES
--- 仿真花/干花
-(1, '绿植花束装饰', 89.00, 55, 11, '清新绿植搭配，仿真工艺，无需打理', NOW()),
-(2, '仿真兰花盆栽', 128.00, 40, 11, '高仿真兰花，绢布花瓣，陶瓷底座', NOW()),
-(3, '牡丹仿真花摆件', 158.00, 32, 11, '富贵牡丹造型，丝绸花瓣，花瓶搭配', NOW()),
-(4, '仿真马蹄莲插花', 99.00, 45, 11, '白色马蹄莲，仿真水珠工艺，玻璃瓶搭配', NOW()),
-(5, '仿真文心兰花艺', 119.00, 38, 11, '文心兰仿真花，含花盆，适合客厅餐桌', NOW()),
-(6, '干花束装饰', 59.00, 60, 12, '天然干花束，多种花材搭配，ins风', NOW()),
-(7, '仿真花摆件套装', 139.00, 35, 11, '组合仿真花艺，含花瓶，送礼佳品', NOW()),
--- 花瓶花器
-(8, '北欧风陶瓷花瓶', 79.00, 50, 21, '简约北欧设计，哑光釉面，三种尺寸可选', NOW()),
-(9, '素烧花器花瓶', 69.00, 42, 22, '日式素烧工艺，粗陶质感，适合干花', NOW()),
-(10, '壁挂花器', 89.00, 28, 22, '铁艺玻璃壁挂花器，免钉安装，可水培', NOW()),
--- 靠垫抱枕
-(11, '哆啦A梦三角靠垫', 99.00, 45, 31, '正版授权，短毛绒面料，45×45cm，可拆洗', NOW()),
-(12, 'ins风纯色抱枕', 59.00, 55, 32, '棉麻面料，45×45cm，含芯，多色可选', NOW()),
-(13, '装饰花卉抱枕', 69.00, 40, 32, '数码印花，短毛绒，45×45cm，隐藏拉链', NOW()),
--- 桌布家纺
-(14, '蕾丝边棉麻桌布', 89.00, 38, 42, '棉麻混纺，蕾丝花边，防水涂层，多尺寸', NOW()),
-(15, '条纹餐桌布', 79.00, 42, 41, '纯棉材质，经典条纹，可机洗，140×180cm', NOW()),
-(16, '格子图案桌布', 69.00, 50, 42, '复古格纹，涤棉面料，防滑底，多色可选', NOW()),
-(17, '民族风印花桌布', 99.00, 35, 42, '民族风印花图案，厚实面料，褶皱处理', NOW()),
--- 家居摆件
-(18, '情侣驯鹿摆件', 129.00, 30, 51, '树脂材质，一雄一雌一对，北欧风格，20cm高', NOW()),
-(19, '波点苹果摆件', 89.00, 25, 53, '陶瓷材质，波点图案，手工上色', NOW()),
-(20, '水手造型摆件', 108.00, 22, 52, '复古做旧工艺，树脂材质，海洋风格', NOW()),
-(21, '鱼形装饰摆件', 79.00, 35, 53, '金属+木质，现代简约，桌面装饰', NOW()),
-(22, '大象吉祥摆件', 138.00, 20, 51, '树脂仿石纹理，寓意吉祥，客厅玄关装饰', NOW()),
--- 香薰用品
-(23, '超声波香薰机', 159.00, 40, 61, '500ml大容量，静音超声波雾化，带LED氛围灯', NOW()),
-(24, '复古铜香炉', 189.00, 12, 62, '纯铜铸造，复古做旧，葫芦造型，含香插', NOW()),
--- 置物收纳
-(25, '简约壁挂置物架', 59.00, 48, 71, '实木搁板，铁艺支架，承重10kg，免钉安装', NOW()),
-(26, '创意铁艺置物架', 139.00, 22, 72, '铁艺手工焊接，多层设计，可做花架/书架', NOW()),
--- 装饰壁饰
-(27, '自行车立体装饰画', 128.00, 18, 81, '立体浮雕装饰画框，自行车主题，复古做旧', NOW()),
-(28, '铁艺山水壁饰', 168.00, 15, 82, '手工铁艺锻打，山水意境，客厅玄关装饰', NOW()),
-(29, '动物系列装饰画', 89.00, 30, 81, '高清微喷，无框画，防水涂层，50×70cm', NOW()),
-(30, '孔雀挂钟照片墙', 199.00, 12, 82, '铁艺孔雀造型+挂钟，创意墙面装饰组合', NOW()),
--- 杯具餐具
-(31, 'ins风玻璃杯套装', 69.00, 60, 91, '高硼硅玻璃，6只装，300ml，耐热耐冷', NOW()),
-(32, '日式玻璃碗碟套装', 159.00, 35, 92, '钢化玻璃材质，12件套，可微波炉加热', NOW()),
--- 创意家居
-(33, '欧式铁艺小圆桌', 358.00, 15, 101, '锻铁框架，钢化玻璃桌面，直径60cm，阳台/花园适用', NOW()),
-(34, '克鲁克斯辐射计', 139.00, 20, 102, '物理光学演示器，太阳能驱动旋转，桌面装饰/教学模型', NOW()),
-(35, '狗狗造型书挡', 99.00, 25, 102, '树脂材质，仿木纹理，一对装，桌面书架收纳', NOW())
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
+LOCK TABLES `pms_product_img` WRITE;
+/*!40000 ALTER TABLE `pms_product_img` DISABLE KEYS */;
+INSERT INTO `pms_product_img` VALUES (1,1,'0f73c1cf-10ba-44e2-b8c5-4f5f7366d894.jpg',0,'2026-06-08 05:29:30',0),(2,2,'50acedf1-418a-4693-8a60-37e342ca37a8.jpg',0,'2026-06-08 05:29:30',0),(3,3,'8bc1c95a-4d17-4f09-9f11-274810cc8463.jpg',0,'2026-06-08 05:29:30',0),(4,4,'b82d3ad1-37ee-4f1d-80eb-70a32363d068.jpg',0,'2026-06-08 05:29:30',0),(5,5,'acfa5218-1029-4150-b2e7-0ef8dff649cd.jpg',0,'2026-06-08 05:29:30',0),(6,6,'79577f8c-8238-478d-8a16-0da8a5ace94d.jpg',0,'2026-06-08 05:29:30',0),(7,7,'adc97f36-8d7b-4711-888f-e76931e352ac.jpg',0,'2026-06-08 05:29:30',0),(8,8,'20532cfe-4ea9-43ae-99a1-086af3c608f7.jpg',0,'2026-06-08 05:29:30',0),(9,9,'7ab8075d-66ab-4e52-952e-e8f679716c66.jpg',0,'2026-06-08 05:29:30',0),(10,10,'7ffb2f80-6e8f-4d19-b128-d149f6766614.jpg',0,'2026-06-08 05:29:30',0),(11,11,'47d1326e-4637-48f7-9a72-df6a56bd1479.jpg',0,'2026-06-08 05:29:30',0),(12,12,'505051fd-5698-4243-be84-56e89759894f.jpg',0,'2026-06-08 05:29:30',0),(13,13,'714389c0-960d-4611-91d1-6e8ee74a0906.jpg',0,'2026-06-08 05:29:30',0),(14,14,'04b61480-e1db-4d30-af26-a7ca2d24166b.jpg',0,'2026-06-08 05:29:30',0),(15,15,'44b1cb71-c93a-42d5-ab42-406af96b8f13.jpg',0,'2026-06-08 05:29:30',0),(16,16,'7fceb9ee-0c56-42ab-847d-7d52375870f6.jpg',0,'2026-06-08 05:29:30',0),(17,17,'9275d728-1a34-45df-b3b5-594a1421dc1c.jpg',0,'2026-06-08 05:29:30',0),(18,18,'2010164d-bbd7-4e47-86e1-06ad046f5c1d.jpg',0,'2026-06-08 05:29:30',0),(19,19,'a5190494-289b-4796-b748-496846267a25.jpg',0,'2026-06-08 05:29:30',0),(20,20,'b22ea160-342a-4161-bcf6-c5660b6b4a42.jpg',0,'2026-06-08 05:29:30',0),(21,21,'deec894d-c99a-4281-99f5-64a346a444e8.jpg',0,'2026-06-08 05:29:30',0),(22,22,'e984f2c8-aef8-4e23-9d16-db38bf9dba9f.jpg',0,'2026-06-08 05:29:30',0),(23,23,'083d3b3a-4290-49e4-bd0d-ab166616c876.jpg',0,'2026-06-08 05:29:30',0),(24,24,'317d44ba-7a5a-43da-a9ee-4bfee7d5d758.jpg',0,'2026-06-08 05:29:30',0),(25,25,'03b87769-2fb9-4aa6-91fe-6ace5af714ad.jpg',0,'2026-06-08 05:29:30',0),(26,26,'6a2ebed1-2b48-4eb6-a378-d56d000acd0a.jpg',0,'2026-06-08 05:29:30',0),(27,27,'27804fd9-02b4-4752-b895-4bd56d81136a.jpg',0,'2026-06-08 05:29:30',0),(28,28,'52aaab34-37ac-492b-b153-ffc49981c0f7.jpg',0,'2026-06-08 05:29:30',0),(29,29,'aa4228d1-25bf-499e-8130-beb8be2217be.jpg',0,'2026-06-08 05:29:30',0),(30,30,'6ef68b42-b89e-4ae7-808a-76c4b6d5eb13.jpg',0,'2026-06-08 05:29:30',0),(31,31,'32c21631-c0b8-4d71-9603-33592eb4706e.jpg',0,'2026-06-08 05:29:30',0),(32,32,'87005616-2e08-4c3b-ba8e-79dcdc42cbed.jpg',0,'2026-06-08 05:29:30',0),(33,33,'02df9e72-6082-4d39-8da2-92f232cec7fe.jpg',0,'2026-06-08 05:29:30',0),(34,34,'000d3b6a-1838-4872-a9a1-1a8e186c7b02.jpg',0,'2026-06-08 05:29:30',0),(35,35,'d27e4948-c07e-4072-9066-c8abeb2e2f20.jpg',0,'2026-06-08 05:29:30',0);
+/*!40000 ALTER TABLE `pms_product_img` ENABLE KEYS */;
+UNLOCK TABLES;
 
--- 商品图片
-INSERT INTO `pms_product_img` (`url`, `product_id`, `create_time`) VALUES
--- 绿植花束 (1)
-('product-1-1.jpg', 1, NOW()),
--- 仿真兰花 (2)
-('product-2-1.jpg', 2, NOW()),
-('product-2-2.jpg', 2, NOW()),
-('product-2-3.jpg', 2, NOW()),
--- 牡丹仿真花 (3)
-('product-3-1.jpg', 3, NOW()),
--- 马蹄莲插花 (4)
-('product-4-1.jpg', 4, NOW()),
--- 仿真文心兰 (5)
-('product-5-1.jpg', 5, NOW()),
-('product-5-2.jpg', 5, NOW()),
--- 干花束 (6)
-('product-6-1.jpg', 6, NOW()),
-('product-6-2.jpg', 6, NOW()),
-('product-6-3.jpg', 6, NOW()),
--- 仿真花套装 (7)
-('product-7-1.jpg', 7, NOW()),
--- 陶瓷花瓶 (8)
-('product-8-1.jpg', 8, NOW()),
-('product-8-2.jpg', 8, NOW()),
--- 素烧花器 (9)
-('product-9-1.jpg', 9, NOW()),
-('product-9-2.jpg', 9, NOW()),
--- 壁挂花器 (10)
-('product-10-1.jpg', 10, NOW()),
-('product-10-2.jpg', 10, NOW()),
-('product-10-3.jpg', 10, NOW()),
--- 哆啦A梦靠垫 (11)
-('product-11-1.jpg', 11, NOW()),
-('product-11-2.jpg', 11, NOW()),
--- ins纯色抱枕 (12)
-('product-12-1.jpg', 12, NOW()),
-('product-12-2.jpg', 12, NOW()),
-('product-12-3.jpg', 12, NOW()),
--- 装饰花卉抱枕 (13)
-('product-13-1.jpg', 13, NOW()),
-('product-13-2.jpg', 13, NOW()),
--- 蕾丝棉麻桌布 (14)
-('product-14-1.jpg', 14, NOW()),
--- 条纹餐桌布 (15)
-('product-15-1.jpg', 15, NOW()),
--- 格子桌布 (16)
-('product-16-1.jpg', 16, NOW()),
-('product-16-2.jpg', 16, NOW()),
-('product-16-3.jpg', 16, NOW()),
--- 印花桌布 (17)
-('product-17-1.jpg', 17, NOW()),
--- 驯鹿摆件 (18)
-('product-18-1.jpg', 18, NOW()),
-('product-18-2.jpg', 18, NOW()),
--- 波点苹果 (19)
-('product-19-1.jpg', 19, NOW()),
--- 水手摆件 (20)
-('product-20-1.jpg', 20, NOW()),
--- 鱼形摆件 (21)
-('product-21-1.jpg', 21, NOW()),
--- 大象摆件 (22)
-('product-22-1.jpg', 22, NOW()),
--- 香薰机 (23)
-('product-23-1.jpg', 23, NOW()),
-('product-23-2.jpg', 23, NOW()),
--- 铜香炉 (24)
-('product-24-1.jpg', 24, NOW()),
-('product-24-2.jpg', 24, NOW()),
--- 壁挂置物架 (25)
-('product-25-1.jpg', 25, NOW()),
-('product-25-2.jpg', 25, NOW()),
--- 铁艺置物架 (26)
-('product-26-1.jpg', 26, NOW()),
--- 自行车装饰画 (27)
-('product-27-1.jpg', 27, NOW()),
--- 山水壁饰 (28)
-('product-28-1.jpg', 28, NOW()),
--- 动物装饰画 (29)
-('product-29-1.jpg', 29, NOW()),
--- 孔雀挂钟 (30)
-('product-30-1.jpg', 30, NOW()),
-('product-30-2.jpg', 30, NOW()),
-('product-30-3.jpg', 30, NOW()),
--- 玻璃杯套装 (31)
-('product-31-1.jpg', 31, NOW()),
--- 碗碟套装 (32)
-('product-32-1.jpg', 32, NOW()),
--- 铁艺小圆桌 (33)
-('product-33-1.jpg', 33, NOW()),
--- 辐射计 (34)
-('product-34-1.jpg', 34, NOW()),
--- 书挡 (35)
-('product-35-1.jpg', 35, NOW())
-ON DUPLICATE KEY UPDATE `url`=VALUES(`url`);
+--
+-- Table structure for table `sms_seckill_session`
+--
 
--- 秒杀场次种子数据
-INSERT INTO `sms_seckill_session` (`product_id`, `seckill_price`, `seckill_stock`, `start_time`, `end_time`) VALUES
-(1, 29.90, 100, NOW(), DATE_ADD(NOW(), INTERVAL 2 HOUR)),
-(5, 39.90, 50, DATE_ADD(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 3 HOUR));
+DROP TABLE IF EXISTS `sms_seckill_session`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sms_seckill_session` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `product_id` int NOT NULL,
+  `seckill_price` decimal(10,2) DEFAULT '0.00',
+  `seckill_stock` int DEFAULT '0',
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` int DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-SET FOREIGN_KEY_CHECKS = 1;
+--
+-- Dumping data for table `sms_seckill_session`
+--
+
+LOCK TABLES `sms_seckill_session` WRITE;
+/*!40000 ALTER TABLE `sms_seckill_session` DISABLE KEYS */;
+INSERT INTO `sms_seckill_session` VALUES (1,1,29.90,100,'2026-06-15 06:40:30','2026-06-15 08:40:30','2026-06-15 06:40:30','2026-06-15 06:40:30',0),(2,5,39.90,50,'2026-06-15 07:40:30','2026-06-15 09:40:30','2026-06-15 06:40:30','2026-06-15 06:40:30',0);
+/*!40000 ALTER TABLE `sms_seckill_session` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `sys_user`
+--
+
+DROP TABLE IF EXISTS `sys_user`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_user` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `code` varchar(32) NOT NULL,
+  `name` varchar(32) NOT NULL,
+  `gender` int DEFAULT '0',
+  `address` varchar(255) DEFAULT '',
+  `pwd` varchar(255) NOT NULL,
+  `avatar` varchar(255) DEFAULT '',
+  `birthday` date DEFAULT NULL,
+  `phone` varchar(20) DEFAULT '',
+  `email` varchar(64) DEFAULT '',
+  `remark` text,
+  `role` int DEFAULT '0',
+  `status` int DEFAULT '1',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted` int DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_user_code` (`code`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sys_user`
+--
+
+LOCK TABLES `sys_user` WRITE;
+/*!40000 ALTER TABLE `sys_user` DISABLE KEYS */;
+INSERT INTO `sys_user` VALUES (1,'admin','管理员',0,'广州','$2a$10$KvX..zmoCRYW1m72ZyLBNeY2j/mfRa.QcvPB5bIueg.RILcdIpqDq','',NULL,'13800000000','admin@mall.com',NULL,1,1,'2026-06-08 05:28:41','2026-06-08 06:07:08',0),(2,'user','测试用户',0,'','$2a$10$KvX..zmoCRYW1m72ZyLBNeY2j/mfRa.QcvPB5bIueg.RILcdIpqDq','',NULL,'13900000000','user@mall.com',NULL,0,1,'2026-06-08 05:28:41','2026-06-08 06:07:08',0),(3,'testuser_qa','testuser_qa',0,'','$2a$10$6MnUUbgScAKQUNbbHDEz.eYCUXWNmgEqMgPFwR5zwWFG8BXg1SsJ6','',NULL,'13800138000','',NULL,0,1,'2026-06-15 06:05:00','2026-06-15 06:05:00',0);
+/*!40000 ALTER TABLE `sys_user` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-06-16  9:41:37
