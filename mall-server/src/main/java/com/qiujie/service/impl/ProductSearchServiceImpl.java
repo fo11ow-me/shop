@@ -141,7 +141,7 @@ public class ProductSearchServiceImpl implements ProductSearchService {
         doc.setStock(p.getStock());
         doc.setCategoryId(p.getCategoryId());
         doc.setStatus(p.getStatus() != null ? p.getStatus().getCode() : 0);
-        doc.setCreateTime(p.getCreateTime());
+        doc.setCreateTime(p.getCreateTime() != null ? p.getCreateTime().toString() : null);
         ProductImg img = productImgMapper.selectFirstByProductId(p.getId());
         doc.setImage(img != null ? img.getUrl() : null);
         return doc;

@@ -5,6 +5,8 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -103,5 +105,23 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(orderTimeoutQueue())
                 .to(orderTimeoutExchange())
                 .with(ORDER_TIMEOUT_ROUTING_KEY);
+    }
+
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
+        converter.setCreateMessageIds(true);
+        return converter;
+    }
+
+    @Bean
+    public org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+            org.springframework.amqp.rabbit.connection.ConnectionFactory connectionFactory,
+            MessageConverter jsonMessageConverter) {
+        org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory factory =
+                new org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(jsonMessageConverter);
+        return factory;
     }
 }

@@ -7,7 +7,6 @@ import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 /**
  * 商品 ES 文档映射
@@ -45,6 +44,6 @@ public class ProductDocument {
     @Field(type = FieldType.Keyword)
     private String image;
 
-    @Field(type = FieldType.Date)
-    private LocalDateTime createTime;
+    @Field(type = FieldType.Keyword)
+    private String createTime;
 }

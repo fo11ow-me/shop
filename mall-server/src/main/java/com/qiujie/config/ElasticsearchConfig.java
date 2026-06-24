@@ -96,7 +96,7 @@ public class ElasticsearchConfig implements ApplicationRunner {
         doc.setStock(p.getStock());
         doc.setCategoryId(p.getCategoryId());
         doc.setStatus(p.getStatus() != null ? p.getStatus().getCode() : 0);
-        doc.setCreateTime(p.getCreateTime());
+        doc.setCreateTime(p.getCreateTime() != null ? p.getCreateTime().toString() : null);
         ProductImg img = productImgMapper.selectFirstByProductId(p.getId());
         if (img != null) {
             doc.setImage(img.getUrl());

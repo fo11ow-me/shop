@@ -15,6 +15,7 @@ services:
     volumes:
       - ../sql/mall.sql:/docker-entrypoint-initdb.d/01-init.sql
       - mall-mysql-data:/var/lib/mysql
+    command: ['mysqld', '--default-time-zone=+08:00']
     networks:
       - mall-network
     restart: unless-stopped

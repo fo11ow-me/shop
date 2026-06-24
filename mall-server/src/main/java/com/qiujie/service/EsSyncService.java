@@ -65,7 +65,7 @@ public class EsSyncService {
         doc.setStock(product.getStock());
         doc.setCategoryId(product.getCategoryId());
         doc.setStatus(product.getStatus().getCode());
-        doc.setCreateTime(product.getCreateTime());
+        doc.setCreateTime(product.getCreateTime() != null ? product.getCreateTime().toString() : null);
         if (imageUrl != null) {
             doc.setImage(imageUrl);
         }

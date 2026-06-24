@@ -18,6 +18,7 @@
         <result property="paymentTime" column="payment_time"/>
         <result property="deliveryTime" column="delivery_time"/>
         <result property="receiptTime" column="receipt_time"/>
+        <result property="seckillSessionId" column="seckill_session_id"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
         <result property="userName" column="user_name"/>
@@ -38,6 +39,7 @@
             o.express_delivery, o.status,
             o.recipient_name, o.recipient_phone, o.recipient_address,
             o.payment_time, o.delivery_time, o.receipt_time,
+            o.seckill_session_id,
             o.create_time, o.update_time,
             u.name AS user_name,
             oi.id AS item_id, oi.order_id, oi.product_id, oi.product_name,
@@ -55,6 +57,7 @@
             o.express_delivery, o.status,
             o.recipient_name, o.recipient_phone, o.recipient_address,
             o.payment_time, o.delivery_time, o.receipt_time,
+            o.seckill_session_id,
             o.create_time, o.update_time,
             u.name AS user_name,
             oi.id AS item_id, oi.order_id, oi.product_id, oi.product_name,

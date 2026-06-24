@@ -181,7 +181,13 @@ public class SeckillMessageListener {
         order.setTotalAmount(message.getSeckillPrice());
         order.setPayMethod(PayMethodEnum.UNKNOWN);
         order.setStatus(OrderStatusEnum.PENDING_PAY);
-        orderMapper.insert(order);
+        try {
+            orderMapper.insert(order);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            // Redis 防重 key 丢失时的兜底：该用户此场次已有订单，恢复已扣库存
+            productMapper.incrementStock(message.getProductId(), 1);
+            return;
+        }
         sendTimeoutMessage(order.getId());
 
         OrderItem item = new OrderItem();
