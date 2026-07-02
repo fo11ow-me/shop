@@ -53,25 +53,25 @@ DROP TABLE IF EXISTS `oms_order`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `oms_order` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `user_id` int NOT NULL,
-  `seckill_session_id` int DEFAULT NULL COMMENT 'ç§’æ€åœºæ¬¡ID',
-  `address_id` int DEFAULT NULL COMMENT 'æ”¶è´§åœ°å€ID',
-  `order_sn` varchar(64) NOT NULL,
-  `payment_sn` varchar(64) DEFAULT '',
-  `total_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
-  `pay_method` int DEFAULT '0',
-  `express_delivery` tinyint DEFAULT '0' COMMENT 'å¿«é€’(0=é¡ºä¸°,1=ç™¾ä¸–,2=åœ†é€š,3=ä¸­é€š)',
-  `status` int DEFAULT '0',
-  `recipient_name` varchar(32) DEFAULT '',
-  `recipient_phone` varchar(20) DEFAULT '',
-  `recipient_address` varchar(255) DEFAULT '',
-  `payment_time` datetime DEFAULT NULL,
-  `delivery_time` datetime DEFAULT NULL,
-  `receipt_time` datetime DEFAULT NULL,
-  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `is_deleted` int DEFAULT '0',
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '订单ID',
+  `user_id` int NOT NULL COMMENT '用户ID',
+  `seckill_session_id` int DEFAULT NULL COMMENT '秒杀场次ID（非秒杀订单为NULL）',
+  `address_id` int DEFAULT NULL COMMENT '收货地址ID',
+  `order_sn` varchar(64) NOT NULL COMMENT '订单编号',
+  `payment_sn` varchar(64) DEFAULT '' COMMENT '支付单号',
+  `total_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '订单总金额',
+  `pay_method` int DEFAULT '0' COMMENT '支付方式（0=未选择，1=微信，2=支付宝）',
+  `express_delivery` tinyint DEFAULT '0' COMMENT '快递公司（0=顺丰，1=百世，2=圆通，3=中通）',
+  `status` int DEFAULT '0' COMMENT '订单状态（0=待支付，1=已支付，2=已发货，3=已收货，4=已取消）',
+  `recipient_name` varchar(32) DEFAULT '' COMMENT '收件人姓名',
+  `recipient_phone` varchar(20) DEFAULT '' COMMENT '收件人电话',
+  `recipient_address` varchar(255) DEFAULT '' COMMENT '收件人地址',
+  `payment_time` datetime DEFAULT NULL COMMENT '支付时间',
+  `delivery_time` datetime DEFAULT NULL COMMENT '发货时间',
+  `receipt_time` datetime DEFAULT NULL COMMENT '收货时间',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+  `is_deleted` int DEFAULT '0' COMMENT '逻辑删除（0=正常，1=已删除）',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_user_seckill` (`user_id`,`seckill_session_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -95,16 +95,16 @@ DROP TABLE IF EXISTS `oms_order_item`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `oms_order_item` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `order_id` int NOT NULL,
-  `product_id` int NOT NULL,
-  `product_name` varchar(128) NOT NULL,
-  `product_img` varchar(512) DEFAULT '',
-  `product_price` decimal(10,2) NOT NULL DEFAULT '0.00',
-  `amount` int DEFAULT '1',
-  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'ä¿®æ”¹æ—¶é—´',
-  `is_deleted` int DEFAULT '0',
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '订单项ID',
+  `order_id` int NOT NULL COMMENT '订单ID',
+  `product_id` int NOT NULL COMMENT '商品ID',
+  `product_name` varchar(128) NOT NULL COMMENT '商品名称（下单时快照）',
+  `product_img` varchar(512) DEFAULT '' COMMENT '商品图片',
+  `product_price` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '商品成交单价',
+  `amount` int DEFAULT '1' COMMENT '购买数量',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+  `is_deleted` int DEFAULT '0' COMMENT '逻辑删除（0=正常，1=已删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -157,17 +157,17 @@ DROP TABLE IF EXISTS `pms_product`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `pms_product` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(128) NOT NULL,
-  `price` decimal(10,2) NOT NULL DEFAULT '0.00',
-  `stock` int DEFAULT '0',
-  `detail` text,
-  `category_id` int DEFAULT '0',
-  `status` int DEFAULT '1',
-  `version` int DEFAULT '1',
-  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `is_deleted` int DEFAULT '0',
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '商品ID',
+  `name` varchar(128) NOT NULL COMMENT '商品名称',
+  `price` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '商品原价',
+  `stock` int DEFAULT '0' COMMENT '商品库存（秒杀下单时扣减此字段）',
+  `detail` text COMMENT '商品详情',
+  `category_id` int DEFAULT '0' COMMENT '分类ID',
+  `status` int DEFAULT '1' COMMENT '商品状态（0=下架，1=上架）',
+  `version` int DEFAULT '1' COMMENT '乐观锁版本号',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+  `is_deleted` int DEFAULT '0' COMMENT '逻辑删除（0=正常，1=已删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -218,15 +218,15 @@ DROP TABLE IF EXISTS `sms_seckill_session`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sms_seckill_session` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `product_id` int NOT NULL,
-  `seckill_price` decimal(10,2) DEFAULT '0.00',
-  `seckill_stock` int DEFAULT '0',
-  `start_time` datetime NOT NULL,
-  `end_time` datetime NOT NULL,
-  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
-  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `is_deleted` int DEFAULT '0',
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '场次ID',
+  `product_id` int NOT NULL COMMENT '商品ID',
+  `seckill_price` decimal(10,2) DEFAULT '0.00' COMMENT '秒杀价格',
+  `seckill_stock` int DEFAULT '0' COMMENT '秒杀库存（加载至Redis作为初始库存）',
+  `start_time` datetime NOT NULL COMMENT '秒杀开始时间',
+  `end_time` datetime NOT NULL COMMENT '秒杀结束时间',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+  `is_deleted` int DEFAULT '0' COMMENT '逻辑删除（0=正常，1=已删除）',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
