@@ -43,22 +43,12 @@ deploy/
 # Documentation (not version controlled)
 docs/
 
-# Agent instructions
-AGENTS.md
-.agents/
-
 # Knowledge graph cache
 .understand-anything/
 **/.understand-anything/
 
-# Skills lock file
-skills-lock.json
-
 # Root-level AI instructions (use .claude/ instead)
 CLAUDE.md
-
-# Codex config
-.codex/
 
 # E2E test configs (local dev only)
 mall-admin/e2e/
@@ -82,3 +72,5 @@ docs/test-reports/
 findings.md
 progress.md
 task_plan.md
+
+*test*
