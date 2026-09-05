@@ -276,7 +276,7 @@ CREATE TABLE `sys_user` (
 
 LOCK TABLES `sys_user` WRITE;
 /*!40000 ALTER TABLE `sys_user` DISABLE KEYS */;
-INSERT INTO `sys_user` VALUES (1,'admin','管理员',0,'广州','$2a$10$KvX..zmoCRYW1m72ZyLBNeY2j/mfRa.QcvPB5bIueg.RILcdIpqDq','',NULL,'13800000000','admin@mall.com',NULL,1,1,'2026-06-08 05:28:41','2026-06-08 06:07:08',0),(2,'user','测试用户',0,'','$2a$10$KvX..zmoCRYW1m72ZyLBNeY2j/mfRa.QcvPB5bIueg.RILcdIpqDq','',NULL,'13900000000','user@mall.com',NULL,0,1,'2026-06-08 05:28:41','2026-06-08 06:07:08',0),(3,'testuser_qa','testuser_qa',0,'','$2a$10$6MnUUbgScAKQUNbbHDEz.eYCUXWNmgEqMgPFwR5zwWFG8BXg1SsJ6','',NULL,'13800138000','',NULL,0,1,'2026-06-15 06:05:00','2026-06-15 06:05:00',0);
+INSERT INTO `sys_user` VALUES (1,'admin','管理员',0,'广州','$2a$10$lLLBS06gXc.vGYeQto8SEOMciEOY16lfu8o41PMWD12RUpWFpBqwe','',NULL,'13800000000','admin@mall.com',NULL,1,1,'2026-06-08 05:28:41','2026-06-08 06:07:08',0),(2,'user','测试用户',0,'','$2a$10$lLLBS06gXc.vGYeQto8SEOMciEOY16lfu8o41PMWD12RUpWFpBqwe','',NULL,'13900000000','user@mall.com',NULL,0,1,'2026-06-08 05:28:41','2026-06-08 06:07:08',0),(3,'testuser_qa','testuser_qa',0,'','$2a$10$6MnUUbgScAKQUNbbHDEz.eYCUXWNmgEqMgPFwR5zwWFG8BXg1SsJ6','',NULL,'13800138000','',NULL,0,1,'2026-06-15 06:05:00','2026-06-15 06:05:00',0);
 /*!40000 ALTER TABLE `sys_user` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
