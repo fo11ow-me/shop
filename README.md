@@ -1,76 +1,211 @@
 # mall — 全栈电商系统
 
-<p align="center">
-  <em>基于 Spring Boot 3 + Vue 3 的 B2C 电商平台</em>
-</p>
-<p align="center">
-  <em>A full-stack B2C e-commerce platform built with Spring Boot 3 + Vue 3</em>
-</p>
+![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen.svg)
+![Vue](https://img.shields.io/badge/Vue-3.4-brightgreen.svg)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen" alt="Spring Boot" />
-  <img src="https://img.shields.io/badge/Vue-3.4-4FC08D" alt="Vue" />
-  <img src="https://img.shields.io/badge/Java-17-orange" alt="Java 17" />
-  <img src="https://img.shields.io/badge/MySQL-8.0-blue" alt="MySQL" />
-  <img src="https://img.shields.io/badge/Redis-7-red" alt="Redis" />
-  <img src="https://img.shields.io/badge/RabbitMQ-3-FF6600" alt="RabbitMQ" />
-  <img src="https://img.shields.io/badge/Elasticsearch-7-00BFB3" alt="Elasticsearch" />
-</p>
+基于 Spring Boot 3 + Vue 3 的 B2C 电商平台，覆盖用户注册登录、商品浏览、购物车、下单、支付全流程，并内置高并发秒杀系统。
 
-<p align="center">
-  🌐 在线访问 / Online: <a href="http://mall.qiujie.net.cn/">http://mall.qiujie.net.cn/</a> (门户/Portal) ｜ <a href="http://mall.qiujie.net.cn/admin/">http://mall.qiujie.net.cn/admin/</a> (后台/Admin)
-</p>
+## 项目介绍
 
----
+| 模块 | 说明 | 技术栈 | 端口 |
+|------|------|--------|------|
+| **mall-server** | 后端服务，REST API | Spring Boot 3.2.5 + MyBatis-Plus + MySQL + Redis + RabbitMQ + Elasticsearch + Sa-Token | 8800 |
+| **mall-admin** | 管理后台前端 | Vue 3.4 + Element Plus + Pinia + ECharts + UnoCSS | 3002 |
+| **mall-portal** | 用户门户前端 | Vue 3.4 + Element Plus + Pinia | 3001 |
 
-## 功能概览 / Features
+> 支付为**模拟支付**：订单提交后本地生成支付流水号，未接入真实第三方支付渠道。
 
-- 用户注册登录 / User authentication (Sa-Token + 图形验证码)
-- 商品浏览搜索 / Product catalog with search
-- 购物车管理 / Shopping cart
-- 订单结算 / Order & checkout
-- 秒杀活动 / Flash sale (Redis Lua + RabbitMQ 死信队列)
-- 管理后台 / Admin dashboard (ECharts + 权限管理)
-- OSS 图片存储 / Image storage with Alibaba Cloud OSS
+## 核心亮点
 
----
+- ⚡ **秒杀高并发方案**：Redis Lua 脚本原子扣减库存防超卖；RabbitMQ 消息削峰异步下单；消费失败自动重试（最多 3 次），超限回滚库存；用户级防重与消费幂等
+- ⏰ **订单超时取消双保险**：RabbitMQ 延迟队列（TTL 10 分钟）到期自动取消订单并恢复库存，前端倒计时轮询兜底
+- 🔍 **Elasticsearch 商品搜索**：商品文档同步 + 定时增量同步任务，关键词/分类检索
+- 🔐 **认证与安全**：Sa-Token 双端登录态隔离、同端互踢（同账号新登录踢掉旧会话）；`@RateLimit` 注解 + Redis 滑动窗口限流；Redisson 分布式锁；布隆过滤器防缓存穿透
+- 🗄 **多级缓存**：Redis + Caffeine 本地缓存，首页、商品、秒杀场次等热点数据自动缓存与失效
+- 📊 **管理看板**：ECharts 数据可视化——销售趋势、分类销量 TOP5、订单状态概览
+- 📁 **Excel 导入导出**：基于 POI 的注解式表格导入导出
 
-## 技术栈 / Tech Stack
+## 页面截图
 
-| 层级 / Layer | 技术 / Technology |
-|-------------|-------------------|
-| 后端框架 / Backend | Spring Boot 3.2.5 + MyBatis-Plus 3.5.5 |
-| 安全 / Security | Sa-Token |
-| 数据库 / Database | MySQL 8.0 + Redis 7 |
-| 消息队列 / MQ | RabbitMQ 3 |
-| 搜索引擎 / Search | Elasticsearch 7 |
-| 管理后台 / Admin | Vue 3.4 + Element Plus 2.5 + Pinia + ECharts + UnoCSS |
-| 用户门户 / Portal | Vue 3.4 + Element Plus 2.5 + Axios |
+### 用户门户（mall-portal）
 
----
+| 首页 | 商品分类 | 商品详情 |
+|------|---------|---------|
+| ![门户首页](images/portal-home.png) | ![商品分类](images/portal-product-list.png) | ![商品详情](images/portal-product-detail.png) |
 
-## 快速启动 / Quick Start
+| 限时秒杀 | 购物车 | 订单列表 |
+|---------|--------|---------|
+| ![限时秒杀](images/portal-seckill.png) | ![购物车](images/portal-cart.png) | ![订单列表](images/portal-orders.png) |
 
-### 前置依赖 / Prerequisites
+### 管理后台（mall-admin）
 
-- **Java 17+** + Maven 3
-- **Node.js 18+** + npm
-- **Docker**（MySQL + Redis + RabbitMQ + Elasticsearch）
+| 数据看板 | 商品管理 |
+|---------|---------|
+| ![数据看板](images/admin-home.png) | ![商品管理](images/admin-product.png) |
 
-### 1. 启动中间件 / Start Middleware
+| 订单管理 | 秒杀管理 |
+|---------|---------|
+| ![订单管理](images/admin-order.png) | ![秒杀管理](images/admin-seckill.png) |
+
+## 核心业务流程
+
+### 普通购物流程
+
+```mermaid
+flowchart LR
+    A[注册 / 登录] --> B[浏览商品<br/>首页 / 分类 / ES 搜索]
+    B --> C[商品详情]
+    C --> D[加入购物车]
+    D --> E[确认订单<br/>填写地址 / 选择配送方式]
+    E --> F[提交订单]
+    F --> G[模拟支付]
+    G --> H[管理端发货]
+    H --> I[确认收货]
+```
+
+### 秒杀流程
+
+```mermaid
+flowchart TD
+    A[管理端创建秒杀场次] --> B[用户点击抢购]
+    B --> C[限流拦截器<br/>滑动窗口限流]
+    C --> D[Lua 脚本原子操作<br/>库存初始化 / 防重检查 / 扣 Redis 库存]
+    D -->|库存不足或重复抢购| F[返回失败]
+    D -->|扣减成功| E[发送秒杀消息至 RabbitMQ]
+    E --> G[消费者异步下单<br/>幂等检查 → DB 扣库存 → 创建订单]
+    G -->|失败且重试小于 3 次| H[进入重试延迟队列<br/>5 秒后重新消费]
+    G -->|失败且重试达 3 次| I[回滚 Redis 库存]
+    G -->|成功| J[结果写入 Redis<br/>前端轮询获取秒杀结果]
+    J --> K{10 分钟内是否支付}
+    K -->|未支付| L[延迟队列到期<br/>自动取消订单并恢复库存]
+    K -->|已支付| M[订单完成]
+```
+
+## 技术栈
+
+### 后端（mall-server）
+
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| Spring Boot | 3.2.5 | 基础框架（Java 17） |
+| MyBatis-Plus | 3.5.5 | ORM 数据访问 |
+| MySQL | 8.0 | 关系数据库（Druid 连接池） |
+| Redis | 7 | 缓存 / 分布式锁 / 限流 / 秒杀库存 |
+| RabbitMQ | 3 | 秒杀异步下单 / 订单超时取消 |
+| Elasticsearch | 7.17 | 商品全文搜索 |
+| Sa-Token | 1.39 | 双端认证 / 会话管理 |
+| Redisson | 3.24 | 分布式锁 |
+| springdoc-openapi | 2.3 | API 文档（Swagger UI） |
+
+### 前端
+
+| 技术 | mall-admin | mall-portal |
+|------|-----------|-------------|
+| Vue | 3.4 | 3.4 |
+| Element Plus | 2.5 | 2.5 |
+| Pinia | ✅ | ✅ |
+| Vue Router | ✅ | ✅ |
+| ECharts | ✅ | — |
+| UnoCSS | ✅ | — |
+| Vite | 5 | 5 |
+
+## 系统架构图
+
+```mermaid
+flowchart LR
+    B[浏览器]
+
+    subgraph 前端
+        P[用户门户 mall-portal<br/>:3001]
+        A[管理后台 mall-admin<br/>:3002]
+    end
+
+    S[mall-server 后端<br/>:8800]
+
+    subgraph 中间件 Docker 容器
+        M[(MySQL 8<br/>:3306)]
+        R[(Redis 7<br/>:6379)]
+        Q[RabbitMQ 3<br/>:5672]
+        E[(Elasticsearch 7<br/>:19200)]
+    end
+
+    B --> P
+    B --> A
+    P -->|/dev 代理| S
+    A -->|/admin-api 代理| S
+    S --> M
+    S --> R
+    S --> Q
+    S --> E
+```
+
+## 目录结构
+
+```
+mall/
+├── sql/                          # 初始化 SQL（表结构 + 种子数据）
+├── images/                       # README 页面截图
+├── docker-compose.yml            # 本地开发中间件编排（MySQL/Redis/RabbitMQ/ES）
+├── mall-server/                  # 后端服务（Spring Boot 3）
+│   ├── src/main/java/com/qiujie/
+│   │   ├── controller/           # 接口层（admin/ 管理端、portal/ 门户端）
+│   │   ├── service/              # 业务层
+│   │   ├── mapper/               # 数据层（MyBatis-Plus）
+│   │   ├── entity/ dto/ vo/ enums/   # 实体 / 传输对象 / 枚举
+│   │   ├── config/               # Sa-Token、Redis、RabbitMQ、OSS 等配置
+│   │   ├── mq/                   # 消息监听（秒杀下单、订单超时取消）
+│   │   ├── interceptor/          # 限流拦截器
+│   │   ├── job/                  # 定时任务（ES 增量同步）
+│   │   └── util/                 # Redis 工具、缓存客户端、布隆过滤器等
+│   └── src/main/resources/       # 配置文件与 Mapper XML
+├── mall-admin/                   # 管理后台前端（Vue 3，端口 3002）
+│   ├── src/api/                  # 接口封装
+│   ├── src/stores/               # Pinia 状态管理
+│   ├── src/router/               # 路由
+│   ├── src/views/                # 页面（商品 / 订单 / 用户 / 分类 / 秒杀 / 看板）
+│   └── src/components/           # 公共组件
+└── mall-portal/                  # 用户门户前端（Vue 3，端口 3001）
+    ├── src/api/                  # 接口封装
+    ├── src/stores/               # Pinia 状态管理
+    ├── src/router/               # 路由
+    ├── src/views/                # 页面（首页 / 商品 / 秒杀 / 购物车 / 订单等）
+    └── src/components/           # 公共组件
+```
+
+## 本地启动
+
+### 前置要求
+
+- JDK 17+、Maven 3
+- Node.js 18+、npm
+- Docker（中间件统一由 Docker 容器提供，无需本机安装 MySQL/Redis 等）
+
+### 1. 启动中间件
 
 ```bash
 docker compose -f docker-compose.yml up -d
 ```
 
-### 2. 启动后端 / Start Server（端口 8800）
+首次启动 MySQL 会自动执行 `sql/mall.sql` 初始化库表和种子数据。
+
+### 2. 启动后端（端口 8800）
 
 ```bash
 cd mall-server
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev -Dspring-boot.run.arguments=--spring.amqp.deserialization.trust.all=true
 ```
 
-### 3. 启动管理后台 / Start Admin（端口 3002）
+**需要配置的环境变量**：
+
+| 变量 | 说明 |
+|------|------|
+| `OSS_ACCESS_KEY_ID` | 阿里云 OSS AccessKey ID |
+| `OSS_ACCESS_KEY_SECRET` | 阿里云 OSS AccessKey Secret |
+
+> 这两个变量必须设置，否则服务无法启动；设置任意值即可正常启动和浏览，但**图片上传功能需要真实密钥**。中间件连接配置已内置在 `application-dev.yml` 中，无需额外配置。
+
+### 3. 启动管理后台（端口 3002）
 
 ```bash
 cd mall-admin
@@ -78,7 +213,9 @@ npm install
 npm run dev
 ```
 
-### 4. 启动用户门户 / Start Portal（端口 3001）
+访问：http://localhost:3002/admin/
+
+### 4. 启动用户门户（端口 3001）
 
 ```bash
 cd mall-portal
@@ -86,109 +223,20 @@ npm install
 npm run dev
 ```
 
-| 服务 / Service | 地址 / URL |
-|---------------|-----------|
-| 后端 API | http://localhost:8800 |
-| Swagger 文档 | http://localhost:8800/swagger-ui/index.html |
-| 管理后台 / Admin | http://localhost:3002/admin/ |
-| 用户门户 / Portal | http://localhost:3001/ |
+访问：http://localhost:3001
 
----
+### 其他入口
 
-## 模块架构 / Architecture
+- API 文档（Swagger UI）：http://localhost:8800/swagger-ui/index.html
+- 健康检查：http://localhost:8800/actuator/health
 
-```
-┌─────────────────────────────────────────────────┐
-│                   Nginx (反向代理)                  │
-├─────────────────────┬───────────────────────────┤
-│   mall-portal       │      mall-admin            │
-│   Vue 3 · :3001     │      Vue 3 · :3002         │
-├─────────────────────┴───────────────────────────┤
-│                 mall-server                       │
-│            Spring Boot 3 · :8800                  │
-├──────┬──────┬──────┬────────┬───────────────────┤
-│ MySQL│ Redis│  MQ  │   ES   │       OSS         │
-└──────┴──────┴──────┴────────┴───────────────────┘
-```
+## 默认账号
 
-| 模块 / Module | 说明 / Description | 端口 / Port |
-|---------------|-------------------|-------------|
-| **mall-server** | REST API 后端服务 | 8800 |
-| **mall-admin** | 管理后台前端 | 3002 |
-| **mall-portal** | 用户门户前端 | 3001 |
-| MySQL | 数据库 | 3306 |
-| Redis | 缓存 | 6379 |
-| RabbitMQ | 消息队列 | 5672 / 15672 |
-| Elasticsearch | 搜索引擎 | 19200 |
+| 端 | 用户名 | 密码 | 说明 |
+|----|--------|------|------|
+| 管理端 | `admin` | `123456` | 管理员，登录框已预填 |
+| 门户端 | `user` | `123456` | 测试用户（也可用 admin 登录门户） |
 
----
+## 交流群
 
-## 目录结构 / Directory Structure
-
-```
-mall/
-├── mall-server/               # 后端 Spring Boot
-│   ├── src/main/java/com/qiujie/
-│   │   ├── config/            # 配置类
-│   │   ├── controller/        # 控制器 (admin/ portal/)
-│   │   ├── service/           # 业务层
-│   │   ├── mapper/            # 数据访问层
-│   │   ├── entity/            # 实体类
-│   │   ├── enums/             # 枚举类
-│   │   ├── exception/         # 异常处理
-│   │   └── util/              # 工具类
-│   └── src/main/resources/
-│       ├── application.yml        # 主配置
-│       ├── application-dev.yml    # 开发环境
-│       └── application-prod.yml   # 生产环境
-├── mall-admin/                # 管理后台 Vue 3
-│   └── src/
-│       ├── api/               # API 模块
-│       ├── router/            # 路由
-│       ├── stores/            # Pinia 状态管理
-│       ├── views/             # 页面
-│       └── components/        # 组件
-├── mall-portal/               # 用户门户 Vue 3
-│   └── src/
-│       ├── api/               # API 模块
-│       ├── router/            # 路由
-│       └── views/             # 页面
-├── docker-compose.yml         # 本地开发中间件
-└── sql/                       # 数据库初始化
-```
-
----
-
-## 运行测试 / Tests
-
-```bash
-# 后端测试 / Backend tests (H2 内存数据库)
-cd mall-server
-./mvnw test
-
-# 前端 E2E 测试 / Frontend E2E
-cd mall-admin  # or mall-portal
-npx playwright test
-```
-
----
-
-## 默认账号 / Default Account
-
-| 角色 / Role | 用户名 / Username | 密码 / Password |
-|-------------|-------------------|-----------------|
-| 管理员 / Admin | `admin` | `123` |
-
----
-
-## 环境变量 / Environment Variables
-
-敏感信息通过 `.env` 文件管理，模板见 `deploy/docker-compose.server.env.example`。
-
-| 变量 / Variable | 说明 / Description |
-|----------------|-------------------|
-| `DB_PASSWORD` | MySQL 密码 |
-| `REDIS_PASSWORD` | Redis 密码 |
-| `RABBITMQ_PASSWORD` | RabbitMQ 密码 |
-| `OSS_ACCESS_KEY_ID` | 阿里云 OSS AccessKey |
-| `OSS_ACCESS_KEY_SECRET` | 阿里云 OSS Secret |
+欢迎加入 QQ 交流群：**967925576**
