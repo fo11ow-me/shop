@@ -1,0 +1,45 @@
+app:
+  cors:
+    allowed-origins: "*"
+
+spring:
+  amqp:
+    deserialization:
+      trusted-packages: com.qiujie.mq
+  autoconfigure:
+    exclude: []
+  datasource:
+    url: jdbc:mysql://localhost:3306/mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: 123456
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: 123456
+  elasticsearch:
+    uris: http://localhost:19200
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+jwt:
+  # JWT 密钥已废弃 — Sa-Token 替代。保留此块仅为向后兼容旧配置文件模板
+  admin-secret: <占位符>
+  portal-secret: <占位符>
+
+aliyun:
+  oss:
+    endpoint: oss-cn-guangzhou.aliyuncs.com
+    access-key-id: ${OSS_ACCESS_KEY_ID}
+    access-key-secret: ${OSS_ACCESS_KEY_SECRET}
+    bucket-name: mall-quuj
+
+rate-limit:
+  enabled: false

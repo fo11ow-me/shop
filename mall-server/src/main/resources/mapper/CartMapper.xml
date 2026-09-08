@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.qiujie.mapper.CartMapper">
+
+    <select id="selectByUserId" resultType="com.qiujie.entity.Cart">
+        SELECT c.id, c.user_id, c.product_id, c.amount, c.is_selected,
+               p.name AS product_name, p.price AS product_price, p.stock AS product_stock,
+               (SELECT url FROM pms_product_img WHERE product_id = c.product_id AND is_deleted = 0 LIMIT 1) AS product_img
+        FROM oms_cart c
+        LEFT JOIN pms_product p ON p.id = c.product_id AND p.is_deleted = 0
+        WHERE c.user_id = #{userId}
+        ORDER BY c.create_time DESC
+    </select>
+
+    <select id="selectByUserIdAndProductId" resultType="com.qiujie.entity.Cart">
+        SELECT id, user_id, product_id, amount, is_selected
+        FROM oms_cart
+        WHERE user_id = #{userId} AND product_id = #{productId}
+    </select>
+
+</mapper>

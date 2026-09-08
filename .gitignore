@@ -1,0 +1,89 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Java build output
+target/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+
+# Logs
+*.log
+log/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude local settings
+.claude/
+
+# Test artifacts
+.playwright-mcp/
+.superpowers/
+test-results/
+playwright-report/
+
+# Env files with secrets
+.env
+.env.local
+.env.*.local
+
+# Project uploads & cache (runtime data)
+file/
+img/product/
+
+# Temp files (runtime artifacts)
+/tmp/
+
+# Deploy & build directories (not version controlled)
+docker/deploy/
+docker/build/
+
+# Documentation (not version controlled)
+docs/
+
+# Knowledge graph cache
+.understand-anything/
+**/.understand-anything/
+
+# Root-level AI instructions (use .claude/ instead)
+CLAUDE.md
+
+# E2E test configs (local dev only)
+mall-admin/e2e/
+mall-admin/playwright.config.ts
+mall-portal/e2e/
+mall-portal/playwright.config.ts
+
+# Deploy artifacts
+*.tar.gz
+
+# Dist
+dist/
+
+# Planning files
+findings.md
+progress.md
+task_plan.md
+
+# Production config (contains real credentials, never commit)
+application-prod.yml
+**/application-prod.yml
+
+# All test files & benchmarks (local only, never commit)
+*test*
+*Test*
+**/src/test/
+**/e2e/
+**/playwright.config.*
+*benchmark*
+*Benchmark*
+*.jmx
+docs/test-reports/
+classpath.txt

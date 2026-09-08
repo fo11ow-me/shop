@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.qiujie.mapper.ProductImgMapper">
+
+    <select id="selectByProductId" resultType="com.qiujie.entity.ProductImg">
+        SELECT id, url, product_id
+        FROM pms_product_img
+        WHERE product_id = #{productId} AND is_deleted = 0
+    </select>
+
+    <select id="selectByProductIds" resultType="com.qiujie.entity.ProductImg">
+        SELECT id, url, product_id
+        FROM pms_product_img
+        WHERE product_id IN
+        <foreach collection="productIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND is_deleted = 0
+    </select>
+
+    <select id="selectFirstByProductId" resultType="com.qiujie.entity.ProductImg">
+        SELECT id, url, product_id
+        FROM pms_product_img
+        WHERE product_id = #{productId} AND is_deleted = 0
+        LIMIT 1
+    </select>
+
+    <insert id="insertBatch" parameterType="list">
+        INSERT INTO pms_product_img (url, product_id) VALUES
+        <foreach collection="imgs" item="img" separator=",">
+            (#{img.url}, #{img.productId})
+        </foreach>
+    </insert>
+
+</mapper>

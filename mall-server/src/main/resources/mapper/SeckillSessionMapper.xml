@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.qiujie.mapper.SeckillSessionMapper">
+
+    <!-- 查询当前正在进行的秒杀场次 -->
+    <select id="selectActiveSessions" resultType="com.qiujie.entity.SeckillSession">
+        SELECT * FROM sms_seckill_session
+        WHERE start_time &lt;= #{now} AND end_time &gt; #{now} AND is_deleted = 0
+        ORDER BY end_time ASC
+    </select>
+
+    <!-- 查询即将开始的秒杀场次 -->
+    <select id="selectUpcomingSessions" resultType="com.qiujie.entity.SeckillSession">
+        SELECT * FROM sms_seckill_session
+        WHERE start_time &gt; #{now} AND is_deleted = 0
+        ORDER BY start_time ASC
+    </select>
+
+    <!-- 批量查询指定商品是否有进行中的秒杀 -->
+    <select id="selectActiveByProductIds" resultType="com.qiujie.entity.SeckillSession">
+        SELECT * FROM sms_seckill_session
+        WHERE product_id IN
+        <foreach collection="productIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND start_time &lt;= #{now} AND end_time &gt; #{now} AND is_deleted = 0
+        ORDER BY end_time ASC
+    </select>
+
+</mapper>

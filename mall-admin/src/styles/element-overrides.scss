@@ -1,0 +1,58 @@
+// 表格通用微调
+.el-table {
+  th.el-table__cell {
+    background: #f5f7fa;
+    color: var(--text-primary);
+    font-weight: 500;
+    height: 48px;
+  }
+  td.el-table__cell { color: var(--text-regular); }
+
+  .el-table__body tr:hover > td.el-table__cell {
+    background: #f5f7fa;
+  }
+
+  // 空态居中
+  .el-table__empty-block { width: 100% !important; }
+}
+
+// 操作按钮间距
+.el-table .el-button + .el-button { margin-left: var(--padding-mini); }
+
+// 分页组件
+.el-pagination.is-background {
+  .btn-prev, .btn-next, .el-pager li {
+    border-radius: 3px;
+    margin: 0 2px;
+    &:hover { color: var(--color-primary); }
+  }
+  .el-pager li.is-active {
+    background-color: var(--color-primary);
+    border-radius: 3px;
+  }
+}
+
+// 对话框
+.el-dialog {
+  border-radius: 6px;
+  overflow: hidden;
+
+  .el-dialog__header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    margin-right: 0;
+  }
+  .el-dialog__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .el-dialog__body { padding: 20px; }
+  .el-dialog__footer {
+    padding: var(--padding-small) 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--padding-mini);
+  }
+}
