@@ -152,9 +152,7 @@ flowchart LR
 mall/
 ├── db/                           # 数据库 SQL（初始化 / 导出）
 ├── img/                          # 图片资源目录
-│   ├── readme/                   # README 页面截图
-│   └── product/                  # 商品图片本地缓存（运行时产生，不入库）
-├── docs/                         # 文档（设计文档 / 测试报告，不入库）
+│   └── readme/                   # README 页面截图
 ├── docker/
 │   └── local/                    # 本地开发编排（docker-compose.yml，一键拉起 MySQL/Redis/RabbitMQ/ES）
 ├── mall-server/                  # 后端服务（Spring Boot 3）
