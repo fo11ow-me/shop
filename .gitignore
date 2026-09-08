@@ -41,8 +41,9 @@ img/product/
 # Temp files (runtime artifacts)
 /tmp/
 
-# Deploy directory (not version controlled)
+# Deploy & build directories (not version controlled)
 docker/deploy/
+docker/build/
 
 # Documentation (not version controlled)
 docs/

@@ -157,9 +157,7 @@ mall/
 ├── tmp/                          # 临时文件（已 gitignore）
 ├── docs/                         # 文档（设计文档 / 测试报告，不入库）
 ├── docker/
-│   ├── local/                    # 本地开发编排（docker-compose.yml + docker-down.sh）
-│   ├── build/                    # 镜像构建（多阶段 Dockerfile + 构建 compose）
-│   └── deploy/                   # 服务器部署配置（不入库）
+│   └── local/                    # 本地开发编排（docker-compose.yml，一键拉起 MySQL/Redis/RabbitMQ/ES）
 ├── mall-server/                  # 后端服务（Spring Boot 3）
 │   ├── src/main/java/com/qiujie/
 │   │   ├── controller/           # 接口层（admin/ 管理端、portal/ 门户端）
