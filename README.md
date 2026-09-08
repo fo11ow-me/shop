@@ -154,7 +154,6 @@ mall/
 ├── img/                          # 图片资源目录
 │   ├── readme/                   # README 页面截图
 │   └── product/                  # 商品图片本地缓存（运行时产生，不入库）
-├── tmp/                          # 临时文件（已 gitignore）
 ├── docs/                         # 文档（设计文档 / 测试报告，不入库）
 ├── docker/
 │   └── local/                    # 本地开发编排（docker-compose.yml，一键拉起 MySQL/Redis/RabbitMQ/ES）
