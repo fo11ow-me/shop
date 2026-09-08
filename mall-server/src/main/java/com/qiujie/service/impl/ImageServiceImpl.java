@@ -19,11 +19,27 @@ public class ImageServiceImpl implements ImageService {
 
     private final OssService ossService;
 
-    @Value("${upload.path:D:/project/idea/mall/file/}")
+    @Value("${upload.path:img/}")
     private String uploadPath;
 
     public ImageServiceImpl(OssService ossService) {
         this.ossService = ossService;
+    }
+
+    private Path resolveBasePath() {
+        Path path = Paths.get(uploadPath);
+        if (!path.isAbsolute()) {
+            // 如果是相对路径且以 mall-server 结尾的工作目录，向上寻找工程根目录
+            Path currentDir = Paths.get("").toAbsolutePath();
+            if (currentDir.endsWith("mall-server") && !Files.exists(currentDir.resolve(path))) {
+                Path parentPath = currentDir.getParent().resolve(path);
+                if (Files.exists(parentPath)) {
+                    return parentPath.normalize();
+                }
+            }
+            return currentDir.resolve(path).normalize();
+        }
+        return path.normalize();
     }
 
     @Override
@@ -39,9 +55,9 @@ public class ImageServiceImpl implements ImageService {
             default -> "image/jpeg";
         };
         byte[] bytes;
-        Path localPath = Paths.get(uploadPath, fileName).normalize();
-        Path basePath = Paths.get(uploadPath).normalize();
-        Path productPath = Paths.get(uploadPath, "product").normalize();
+        Path basePath = resolveBasePath();
+        Path localPath = basePath.resolve(fileName).normalize();
+        Path productPath = basePath.resolve("product").normalize();
         if (!localPath.startsWith(basePath) || !localPath.startsWith(productPath)) {
             response.setStatus(404);
             return;
@@ -58,7 +74,7 @@ public class ImageServiceImpl implements ImageService {
                     // 本地缓存写入失败不影响返回
                 }
             } catch (Exception e) {
-                Path defaultPath = Paths.get(uploadPath, "product/default.png");
+                Path defaultPath = basePath.resolve("product/default.png");
                 if (Files.exists(defaultPath)) {
                     bytes = Files.readAllBytes(defaultPath);
                     contentType = "image/png";

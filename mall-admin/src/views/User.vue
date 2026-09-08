@@ -174,7 +174,7 @@ const selIds = ref([])
 // 新增/编辑
 const dlgVisible = ref(false)
 const dlgTitle = ref('')
-const form = reactive({ id: null, code: '', name: '', gender: null, phone: '', email: '', birthday: '', address: '', remark: '', status: 1, password: '123' })
+const form = reactive({ id: null, code: '', name: '', gender: null, phone: '', email: '', birthday: '', address: '', remark: '', status: 1, password: '123456' })
 const formRef = ref(null)
 const avatarList = ref([])
 const validateNoSpecialChars = (rule, value, cb) => {
@@ -266,7 +266,7 @@ function handleReset() {
 // 新增/编辑
 function handleAdd() {
   dlgTitle.value = '新增用户'
-  Object.assign(form, { id: null, code: '', name: '', gender: null, phone: '', email: '', birthday: '', address: '', remark: '', status: 1, password: '123' })
+  Object.assign(form, { id: null, code: '', name: '', gender: null, phone: '', email: '', birthday: '', address: '', remark: '', status: 1, password: '123456' })
   avatarList.value = []
   dlgVisible.value = true
 }

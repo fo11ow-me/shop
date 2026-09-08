@@ -34,11 +34,15 @@ playwright-report/
 .env.local
 .env.*.local
 
-# Project uploads (runtime data)
+# Project uploads & cache (runtime data)
 file/
+img/product/
+
+# Temp files (runtime artifacts)
+/tmp/
 
 # Deploy directory (not version controlled)
-deploy/
+docker/deploy/
 
 # Documentation (not version controlled)
 docs/
@@ -62,15 +66,23 @@ mall-portal/playwright.config.ts
 # Dist
 dist/
 
-# JMeter test results
-mall-server/src/test/jmeter/results.jtl
-
-# Test reports (generated artifacts)
-docs/test-reports/
-
 # Planning files
 findings.md
 progress.md
 task_plan.md
 
+# Production config (contains real credentials, never commit)
+application-prod.yml
+**/application-prod.yml
+
+# All test files & benchmarks (local only, never commit)
 *test*
+*Test*
+**/src/test/
+**/e2e/
+**/playwright.config.*
+*benchmark*
+*Benchmark*
+*.jmx
+docs/test-reports/
+classpath.txt

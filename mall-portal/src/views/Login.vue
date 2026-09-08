@@ -59,7 +59,7 @@ const formRef = ref(null)
 const loading = ref(false)
 const verificationCodeImg = ref('')
 let verificationUuid = ''
-const form = reactive({ code: 'admin', password: '123', verificationCode: '' })
+const form = reactive({ code: 'admin', password: '123456', verificationCode: '' })
 const rules = {
   code: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],

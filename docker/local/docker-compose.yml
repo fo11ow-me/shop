@@ -1,3 +1,5 @@
+name: mall
+
 services:
   mysql:
     image: mysql:8.0
@@ -8,12 +10,12 @@ services:
         limits:
           memory: 1g
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-3306}:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
       MYSQL_DATABASE: mall
     volumes:
-      - ../sql/mall.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ../../db/mall.sql:/docker-entrypoint-initdb.d/01-init.sql
       - mall-mysql-data:/var/lib/mysql
     command: ['mysqld', '--default-time-zone=+08:00']
     networks:
@@ -29,7 +31,7 @@ services:
         limits:
           memory: 512m
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     environment:
       REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:-123456}"
     volumes:
@@ -47,8 +49,8 @@ services:
         limits:
           memory: 256m
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
     environment:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-123456}
@@ -67,8 +69,8 @@ services:
         limits:
           memory: 512m
     ports:
-      - "19200:9200"
-      - "19300:9300"
+      - "${ES_PORT:-19200}:9200"
+      - "${ES_NODE_PORT:-19300}:9300"
     environment:
       - "discovery.type=single-node"
       - "ES_JAVA_OPTS=-Xms256m -Xmx256m"

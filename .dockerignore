@@ -15,5 +15,11 @@ playwright-report/
 .claude/
 docs/
 *.md
-deploy/deploy.sh
-deploy/docker-down.sh
+docker/local/
+docker/deploy/
+db/
+tmp/
+mall-admin/e2e/
+mall-admin/playwright.config.ts
+mall-portal/e2e/
+mall-portal/playwright.config.ts

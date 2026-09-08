@@ -2,6 +2,8 @@ server:
   port: 8800
 
 spring:
+  application:
+    name: mall
   profiles:
     active: dev
   devtools:
@@ -27,7 +29,9 @@ spring:
     redis:
       host: ${spring.data.redis.host}
       port: ${spring.data.redis.port}
+      username: ${REDIS_USER:}
       password: ${spring.data.redis.password}
+      key-prefix: "mall:"
       database: 0
       lettuce:
         pool:
@@ -91,6 +95,7 @@ sa-token:
     database: 1
     host: ${spring.data.redis.host}
     port: ${spring.data.redis.port}
+    user: ${REDIS_USER:}
     password: ${spring.data.redis.password}
     timeout: 3000ms
 
@@ -104,3 +109,7 @@ aliyun:
     access-key-id: ${aliyun.oss.access-key-id}
     access-key-secret: ${aliyun.oss.access-key-secret}
     bucket-name: ${aliyun.oss.bucket-name}
+
+upload:
+  path: ${UPLOAD_PATH:img/}
+

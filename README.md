@@ -6,6 +6,12 @@
 
 基于 Spring Boot 3 + Vue 3 的 B2C 电商平台，覆盖用户注册登录、商品浏览、购物车、下单、支付全流程，并内置高并发秒杀系统。
 
+## 在线体验
+
+- **用户门户（商城前台）**：https://mall.qiujie.net.cn
+- **管理后台（运营端）**：https://mall.qiujie.net.cn/admin/
+- **默认测试账号**：用户名 `admin` / 密码 `123456`（登录页已预填）
+
 ## 项目介绍
 
 | 模块 | 说明 | 技术栈 | 端口 |
@@ -32,21 +38,21 @@
 
 | 首页 | 商品分类 | 商品详情 |
 |------|---------|---------|
-| ![门户首页](images/portal-home.png) | ![商品分类](images/portal-product-list.png) | ![商品详情](images/portal-product-detail.png) |
+| ![门户首页](img/readme/portal-home.png) | ![商品分类](img/readme/portal-product-list.png) | ![商品详情](img/readme/portal-product-detail.png) |
 
 | 限时秒杀 | 购物车 | 订单列表 |
 |---------|--------|---------|
-| ![限时秒杀](images/portal-seckill.png) | ![购物车](images/portal-cart.png) | ![订单列表](images/portal-orders.png) |
+| ![限时秒杀](img/readme/portal-seckill.png) | ![购物车](img/readme/portal-cart.png) | ![订单列表](img/readme/portal-orders.png) |
 
 ### 管理后台（mall-admin）
 
 | 数据看板 | 商品管理 |
 |---------|---------|
-| ![数据看板](images/admin-home.png) | ![商品管理](images/admin-product.png) |
+| ![数据看板](img/readme/admin-home.png) | ![商品管理](img/readme/admin-product.png) |
 
 | 订单管理 | 秒杀管理 |
 |---------|---------|
-| ![订单管理](images/admin-order.png) | ![秒杀管理](images/admin-seckill.png) |
+| ![订单管理](img/readme/admin-order.png) | ![秒杀管理](img/readme/admin-seckill.png) |
 
 ## 核心业务流程
 
@@ -144,9 +150,16 @@ flowchart LR
 
 ```
 mall/
-├── sql/                          # 初始化 SQL（表结构 + 种子数据）
-├── images/                       # README 页面截图
-├── docker-compose.yml            # 本地开发中间件编排（MySQL/Redis/RabbitMQ/ES）
+├── db/                           # 数据库 SQL（初始化 / 导出）
+├── img/                          # 图片资源目录
+│   ├── readme/                   # README 页面截图
+│   └── product/                  # 商品图片本地缓存（运行时产生，不入库）
+├── tmp/                          # 临时文件（已 gitignore）
+├── docs/                         # 文档（设计文档 / 测试报告，不入库）
+├── docker/
+│   ├── local/                    # 本地开发编排（docker-compose.yml + docker-down.sh）
+│   ├── build/                    # 镜像构建（多阶段 Dockerfile + 构建 compose）
+│   └── deploy/                   # 服务器部署配置（不入库）
 ├── mall-server/                  # 后端服务（Spring Boot 3）
 │   ├── src/main/java/com/qiujie/
 │   │   ├── controller/           # 接口层（admin/ 管理端、portal/ 门户端）
@@ -184,10 +197,10 @@ mall/
 ### 1. 启动中间件
 
 ```bash
-docker compose -f docker-compose.yml up -d
+docker compose -f docker/local/docker-compose.yml up -d
 ```
 
-首次启动 MySQL 会自动执行 `sql/mall.sql` 初始化库表和种子数据。
+首次启动 MySQL 会自动执行 `db/mall.sql` 初始化库表和种子数据。
 
 ### 2. 启动后端（端口 8800）
 
